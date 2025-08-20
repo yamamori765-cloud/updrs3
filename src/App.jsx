@@ -276,7 +276,7 @@ export default function App() {
             <thead className="bg-gray-100">
               <tr>
                 {/* <th className="text-left px-4 py-2 w-24">ID</th> */}
-                <th className="text-left px-4 py-2">項目（自分用ラベル）</th>
+                <th className="text-left px-4 py-2">項目</th>
                 <th className="text-left px-4 py-2 w-56">スコア</th>
               </tr>
             </thead>
