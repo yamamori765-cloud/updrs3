@@ -8,34 +8,33 @@ import { useEffect, useMemo, useState } from "react";
  */
 
 const ITEMS = [
-  // 必要に応じて増減OK（labelは自分用メモ。原文そのままは貼らない）
-  { id: "18", label: "言語" },
-  { id: "19", label: "表情" },
-  { id: "20F", label: "安静時振戦　顔面" },
-  { id: "20RUE", label: "安静時振戦　右上肢" },
-  { id: "20LUE", label: "安静時振戦　左上肢" },
-  { id: "20RLE", label: "安静時振戦　右下肢" },
-  { id: "20LLE", label: "安静時振戦　左下肢" },
-  { id: "21R", label: "動作時振戦　右上肢" },
-  { id: "21L", label: "動作時振戦　左上肢" },
-  { id: "22Neck", label: "筋強剛　頸部" },
-  { id: "22RUE", label: "筋強剛　右上肢" },
-  { id: "22LUE", label: "筋強剛　左上肢" },
-  { id: "22RLE", label: "筋強剛　右下肢" },
-  { id: "22LLE", label: "筋強剛　左下肢" },
-  { id: "23R", label: "タッピング　右" },
-  { id: "23L",  label: "タッピング　左" },
-  { id: "24R", label: "手の運動　右" },
-  { id: "24L", label: "手の運動　左" },
-  { id: "25R", label: "回外・回内　右" },
-  { id: "25L", label: "回外・回内　左" },
-  { id: "26R", label: "下肢の敏捷性　右" },
-  { id: "26L", label: "下肢の敏捷性　左" },
-  { id: "27", label: "椅子からの立ち上がり" },
-  { id: "28", label: "姿勢" },
-  { id: "29", label: "歩行" },
-  { id: "30", label: "姿勢の安定性" },
-  { id: "31", label: "動作緩慢・運動減少" },
+  { label: "言語" },
+  { label: "表情" },
+  { label: "安静時振戦　顔面" },
+  { label: "安静時振戦　右上肢" },
+  { label: "安静時振戦　左上肢" },
+  { label: "安静時振戦　右下肢" },
+  { label: "安静時振戦　左下肢" },
+  { label: "動作時振戦　右上肢" },
+  { label: "動作時振戦　左上肢" },
+  { label: "筋強剛　頸部" },
+  { label: "筋強剛　右上肢" },
+  { label: "筋強剛　左上肢" },
+  { label: "筋強剛　右下肢" },
+  { label: "筋強剛　左下肢" },
+  { label: "タッピング　右" },
+  { label: "タッピング　左" },
+  { label: "手の運動　右" },
+  { label: "手の運動　左" },
+  { label: "回外・回内　右" },
+  { label: "回外・回内　左" },
+  { label: "下肢の敏捷性　右" },
+  { label: "下肢の敏捷性　左" },
+  { label: "椅子からの立ち上がり" },
+  { label: "姿勢" },
+  { label: "歩行" },
+  { label: "姿勢の安定性" },
+  { label: "動作緩慢・運動減少" },
 ];
 
 /** 固定の測定方法テキスト（編集不可の説明用） */
@@ -113,12 +112,13 @@ export default function App() {
   }, [scores, notes]);
 
   const total = useMemo(
-    () => ITEMS.reduce((sum, it) => sum + Number(scores[it.id] ?? 0), 0),
+    () => ITEMS.reduce((sum, it) => sum + Number(scores[it.label] ?? 0), 0),
     [scores]
   );
 
-  const setScore = (id, v) =>
-    setScores((prev) => ({ ...prev, [id]: Number(v) }));
+  // Set score by label
+  const setScore = (label, v) =>
+    setScores((prev) => ({ ...prev, [label]: Number(v) }));
 
   const resetAll = () => {
     if (!confirm("全スコアとメモをクリアします。よろしいですか？")) return;
@@ -126,51 +126,46 @@ export default function App() {
     setNotes("");
   };
 
-  const handleLabelClick = (e, id) => {
+  // Keep GUIDE_TEXT and pop logic, but for demo, just show dummy text for all labels.
+  const handleLabelClick = (e, label) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
+    // No ID mapping, so just show label as text, or dummy.
     const text =
-      GUIDE_TEXT[id] ||
-      "この項目の説明は未設定です。GUIDE_TEXT に追記してください。";
+      "この項目の説明は未設定です。";
 
     const POP_W = 300;     // 幅
     const POP_H = 220;     // 想定高さ
     const M = 8;           // 余白
 
-    // fixed はビューポート基準（scrollX/Yは足さない）
     let left = rect.left;
     let top  = rect.bottom + M;
 
-    // 右はみ出し防止
     const maxLeft = window.innerWidth - POP_W - M;
     if (left > maxLeft) left = Math.max(M, maxLeft);
     if (left < M) left = M;
-
-    // 下に入らなければ上に出す
     if (top + POP_H > window.innerHeight - M) {
       top = Math.max(M, rect.top - POP_H - M);
     }
-
-    setPop({ open: true, id, text, x: left, y: top });
+    setPop({ open: true, id: label, text, x: left, y: top });
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
   const handleExportCSV = () => {
     // ヘッダー
-    const headers = ["項目ID", "項目名", "スコア"];
+    const headers = ["項目名", "スコア"];
     // 各項目を行に
     const rows = ITEMS.map(it => [
-      it.id,
       it.label,
-      scores[it.id] ?? ""
+      scores[it.label] ?? ""
     ]);
     // 追加情報（ID, 日付, 時刻, 服薬後, 合計, メモ）も行で追加
-    rows.unshift(["ID", "", userId]);
-    rows.unshift(["日付", "", measureDate]);
-    rows.unshift(["時刻", "", `${measureHour}:${measureMinute}`]);
-    rows.unshift(["服薬後(分)", "", afterMinutes]);
-    rows.push(["合計", "", total]);
-    rows.push(["メモ", "", notes.replace(/\r?\n/g, " ")]);
+    rows.unshift(["ID", userId]);
+    rows.unshift(["日付", measureDate]);
+    rows.unshift(["時刻", `${measureHour}:${measureMinute}`]);
+    rows.unshift(["服薬後(分)", afterMinutes]);
+    rows.push(["合計", total]);
+    rows.push(["メモ", notes.replace(/\r?\n/g, " ")]);
     // CSV文字列生成
     const csv = [headers, ...rows].map(arr =>
       arr.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
@@ -280,38 +275,38 @@ export default function App() {
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="text-left px-4 py-2 w-24">ID</th>
+                {/* <th className="text-left px-4 py-2 w-24">ID</th> */}
                 <th className="text-left px-4 py-2">項目（自分用ラベル）</th>
                 <th className="text-left px-4 py-2 w-56">スコア</th>
               </tr>
             </thead>
             <tbody>
               {ITEMS.map((it) => {
-                const cur = Number(scores[it.id] ?? -1);
+                const cur = Number(scores[it.label] ?? -1);
                 return (
-                  <tr key={it.id} className="border-t">
-                    <td className="px-4 py-2 font-mono">{it.id}</td>
+                  <tr key={it.label} className="border-t">
+                    {/* <td className="px-4 py-2 font-mono">{it.id}</td> */}
                     <td className="px-4 py-2">
                       <span className="text-gray-900">{it.label}</span>
                       <button
                         type="button"
                         className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline"
-                        onClick={(e) => handleLabelClick(e, it.id)}
+                        onClick={(e) => handleLabelClick(e, it.label)}
                         aria-label={`${it.label} の説明を表示`}
                       >
                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
                       </button>
                     </td>
                     <td className="px-4 py-2">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {[0, 1, 2, 3, 4].map((n) => {
                           const selected = cur === n;
                           return (
                             <button
                               key={n}
-                              onClick={() => setScore(it.id, n)}
+                              onClick={() => setScore(it.label, n)}
                               className={
-                                "px-3 py-1 rounded-lg border text-sm transition " +
+                                "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
                                 (selected
                                   ? "bg-blue-500 text-white border-blue-500"
                                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
@@ -328,8 +323,8 @@ export default function App() {
                 );
               })}
               <tr className="border-t bg-gray-50">
+                {/* <td className="px-4 py-3 font-semibold">合計</td> */}
                 <td className="px-4 py-3 font-semibold">合計</td>
-                <td className="px-4 py-3 text-gray-600">全項目の合計スコア</td>
                 <td className="px-4 py-3 text-xl font-bold">{total}</td>
               </tr>
             </tbody>
