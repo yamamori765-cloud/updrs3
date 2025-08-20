@@ -8,33 +8,33 @@ import { useEffect, useMemo, useState } from "react";
  */
 
 const ITEMS = [
-  { label: "言語" },
-  { label: "表情" },
-  { label: "安静時振戦　顔面" },
-  { label: "安静時振戦　右上肢" },
-  { label: "安静時振戦　左上肢" },
-  { label: "安静時振戦　右下肢" },
-  { label: "安静時振戦　左下肢" },
-  { label: "動作時振戦　右上肢" },
-  { label: "動作時振戦　左上肢" },
-  { label: "筋強剛　頸部" },
-  { label: "筋強剛　右上肢" },
-  { label: "筋強剛　左上肢" },
-  { label: "筋強剛　右下肢" },
-  { label: "筋強剛　左下肢" },
-  { label: "タッピング　右" },
-  { label: "タッピング　左" },
-  { label: "手の運動　右" },
-  { label: "手の運動　左" },
-  { label: "回外・回内　右" },
-  { label: "回外・回内　左" },
-  { label: "下肢の敏捷性　右" },
-  { label: "下肢の敏捷性　左" },
-  { label: "椅子からの立ち上がり" },
-  { label: "姿勢" },
-  { label: "歩行" },
-  { label: "姿勢の安定性" },
-  { label: "動作緩慢・運動減少" },
+  { id: "18",     label: "言語" },
+  { id: "19",     label: "表情" },
+  { id: "20F",    label: "安静時振戦　顔面" },
+  { id: "20RUE",  label: "安静時振戦　右上肢" },
+  { id: "20LUE",  label: "安静時振戦　左上肢" },
+  { id: "20RLE",  label: "安静時振戦　右下肢" },
+  { id: "20LLE",  label: "安静時振戦　左下肢" },
+  { id: "21R",    label: "動作時振戦　右上肢" },
+  { id: "21L",    label: "動作時振戦　左上肢" },
+  { id: "22Neck", label: "筋強剛　頸部" },
+  { id: "22RUE",  label: "筋強剛　右上肢" },
+  { id: "22LUE",  label: "筋強剛　左上肢" },
+  { id: "22RLE",  label: "筋強剛　右下肢" },
+  { id: "22LLE",  label: "筋強剛　左下肢" },
+  { id: "23R",    label: "タッピング　右" },
+  { id: "23L",    label: "タッピング　左" },
+  { id: "24R",    label: "手の運動　右" },
+  { id: "24L",    label: "手の運動　左" },
+  { id: "25R",    label: "回外・回内　右" },
+  { id: "25L",    label: "回外・回内　左" },
+  { id: "26R",    label: "下肢の敏捷性　右" },
+  { id: "26L",    label: "下肢の敏捷性　左" },
+  { id: "27",     label: "椅子からの立ち上がり" },
+  { id: "28",     label: "姿勢" },
+  { id: "29",     label: "歩行" },
+  { id: "30",     label: "姿勢の安定性" },
+  { id: "31",     label: "動作緩慢・運動減少" },
 ];
 
 /** 固定の測定方法テキスト（編集不可の説明用） */
@@ -112,13 +112,13 @@ export default function App() {
   }, [scores, notes]);
 
   const total = useMemo(
-    () => ITEMS.reduce((sum, it) => sum + Number(scores[it.label] ?? 0), 0),
+    () => ITEMS.reduce((sum, it) => sum + Number(scores[it.id] ?? 0), 0),
     [scores]
   );
 
-  // Set score by label
-  const setScore = (label, v) =>
-    setScores((prev) => ({ ...prev, [label]: Number(v) }));
+  // Set score by id
+  const setScore = (id, v) =>
+    setScores((prev) => ({ ...prev, [id]: Number(v) }));
 
   const resetAll = () => {
     if (!confirm("全スコアとメモをクリアします。よろしいですか？")) return;
@@ -126,17 +126,14 @@ export default function App() {
     setNotes("");
   };
 
-  // Keep GUIDE_TEXT and pop logic, but for demo, just show dummy text for all labels.
-  const handleLabelClick = (e, label) => {
+  const handleLabelClick = (e, id) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    // No ID mapping, so just show label as text, or dummy.
-    const text =
-      "この項目の説明は未設定です。";
+    const text = GUIDE_TEXT[id] || "この項目の説明は未設定です。GUIDE_TEXT に追記してください。";
 
-    const POP_W = 300;     // 幅
-    const POP_H = 220;     // 想定高さ
-    const M = 8;           // 余白
+    const POP_W = 300;
+    const POP_H = 220;
+    const M = 8;
 
     let left = rect.left;
     let top  = rect.bottom + M;
@@ -147,7 +144,7 @@ export default function App() {
     if (top + POP_H > window.innerHeight - M) {
       top = Math.max(M, rect.top - POP_H - M);
     }
-    setPop({ open: true, id: label, text, x: left, y: top });
+    setPop({ open: true, id, text, x: left, y: top });
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
@@ -157,7 +154,7 @@ export default function App() {
     // 各項目を行に
     const rows = ITEMS.map(it => [
       it.label,
-      scores[it.label] ?? ""
+      scores[it.id] ?? ""
     ]);
     // 追加情報（ID, 日付, 時刻, 服薬後, 合計, メモ）も行で追加
     rows.unshift(["ID", userId]);
@@ -272,60 +269,60 @@ export default function App() {
 
         {/* 一覧 */}
         <div className="rounded-2xl bg-white shadow overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead className="bg-gray-100">
               <tr>
-                {/* <th className="text-left px-4 py-2 w-24">ID</th> */}
-                <th className="text-left px-4 py-2">項目</th>
-                <th className="text-left px-4 py-2 w-56">スコア</th>
+                <th className="w-12 px-2 py-2 text-left text-xs text-gray-500">ID</th>
+                <th className="px-2 py-2 text-left">項目</th>
+                <th className="w-[320px] px-2 py-2 text-left">スコア</th>
               </tr>
             </thead>
             <tbody>
               {ITEMS.map((it) => {
-                const cur = Number(scores[it.label] ?? -1);
                 return (
-                  <tr key={it.label} className="border-t">
-                    {/* <td className="px-4 py-2 font-mono">{it.id}</td> */}
-                    <td className="px-4 py-2">
+                  <tr key={it.id} className="border-t">
+                    <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">{it.id}</td>
+                    <td className="px-2 py-2">
                       <span className="text-gray-900">{it.label}</span>
                       <button
                         type="button"
                         className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline"
-                        onClick={(e) => handleLabelClick(e, it.label)}
+                        onClick={(e) => handleLabelClick(e, it.id)}
                         aria-label={`${it.label} の説明を表示`}
                       >
                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
                       </button>
                     </td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        {[0, 1, 2, 3, 4].map((n) => {
-                          const selected = cur === n;
-                          return (
-                            <button
-                              key={n}
-                              onClick={() => setScore(it.label, n)}
-                              className={
-                                "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
-                                (selected
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                              }
-                              aria-pressed={selected}
-                            >
-                              {n}
-                            </button>
-                          );
-                        })}
+                    <td className="px-2 py-2">
+                      <div className="overflow-x-auto md:overflow-visible">
+                        <div className="flex flex-nowrap gap-2 whitespace-nowrap">
+                          {[0, 1, 2, 3, 4].map((n) => {
+                            const selected = Number(scores[it.id] ?? -1) === n;
+                            return (
+                              <button
+                                key={n}
+                                onClick={() => setScore(it.id, n)}
+                                className={
+                                  "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
+                                  (selected
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
+                                }
+                                aria-pressed={selected}
+                              >
+                                {n}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </td>
                   </tr>
                 );
               })}
               <tr className="border-t bg-gray-50">
-                {/* <td className="px-4 py-3 font-semibold">合計</td> */}
                 <td className="px-4 py-3 font-semibold">合計</td>
-                <td className="px-4 py-3 text-xl font-bold">{total}</td>
+                <td className="px-4 py-3 text-xl font-bold" colSpan={2}>{total}</td>
               </tr>
             </tbody>
           </table>
