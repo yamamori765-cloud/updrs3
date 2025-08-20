@@ -79,7 +79,7 @@ export default function App() {
 
   const [scores, setScores] = useState({});
   const [notes, setNotes] = useState("");
-  const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0 });
+  const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0, w: 300 });
   const [userId, setUserId] = useState("");
   const [measureDate, setMeasureDate] = useState(defaultDate);
   const [measureHour, setMeasureHour] = useState(defaultHour);
@@ -131,20 +131,45 @@ export default function App() {
     const rect = e.currentTarget.getBoundingClientRect();
     const text = GUIDE_TEXT[id] || "この項目の説明は未設定です。GUIDE_TEXT に追記してください。";
 
-    const POP_W = 300;
-    const POP_H = 220;
-    const M = 8;
+    // --- ポップ幅をテキストに合わせて自動調整（折り返さない）---
+    const measure = (t) => {
+      const probe = document.createElement('div');
+      probe.style.position = 'absolute';
+      probe.style.visibility = 'hidden';
+      probe.style.whiteSpace = 'nowrap';
+      probe.style.fontSize = '0.875rem'; // text-sm 相当
+      probe.style.lineHeight = '1.25rem';
+      probe.style.padding = '0px';
+      probe.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+      // 最長行のみ計測
+      const longest = String(t).split('\n').reduce((a, b) => (a.length >= b.length ? a : b), '');
+      probe.textContent = longest || '';
+      document.body.appendChild(probe);
+      const w = probe.scrollWidth;
+      document.body.removeChild(probe);
+      return w;
+    };
 
+    const M = 8;               // 余白
+    const minW = 220;          // 最小幅
+    const maxW = Math.max(220, window.innerWidth - 2 * M); // 画面内に収まる上限
+    const contentW = measure(text) + 40; // パディング/ボーダー分を上乗せ
+    const popW = Math.min(Math.max(contentW, minW), maxW);
+
+    // --- 位置計算（fixed：ビューポート基準）---
     let left = rect.left;
-    let top  = rect.bottom + M;
+    let top  = rect.bottom + M; // ボタン直下
 
-    const maxLeft = window.innerWidth - POP_W - M;
+    const maxLeft = window.innerWidth - popW - M;
     if (left > maxLeft) left = Math.max(M, maxLeft);
     if (left < M) left = M;
+
+    const POP_H = 240; // 想定高さ（足りなければ増やす）
     if (top + POP_H > window.innerHeight - M) {
       top = Math.max(M, rect.top - POP_H - M);
     }
-    setPop({ open: true, id, text, x: left, y: top });
+
+    setPop({ open: true, id, text, x: left, y: top, w: popW });
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
@@ -178,8 +203,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="max-w-5xl mx-auto p-6">
+    <div className="min-h-screen bg-gray-50 text-gray-900 pb-24 md:pb-0">
+      <div className="max-w-5xl mx-auto p-6 md:pr-28">
         {/* タイトル */}
         <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">UPDRS Part III（簡易版）</h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
@@ -351,14 +376,12 @@ export default function App() {
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed z-50 max-w-sm rounded-xl border bg-white p-3 shadow-lg"
-            style={{ top: pop.y, left: pop.x, width: 300 }}
+            className="fixed z-50 rounded-xl border bg-white p-3 shadow-lg"
+            style={{ top: pop.y, left: pop.x, width: pop.w, maxWidth: `calc(100vw - 16px)` }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 text-xs font-semibold text-gray-600">測定方法</div>
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-              {pop.text}
-            </pre>
+            <pre className="m-0 whitespace-pre text-sm leading-relaxed text-gray-800">{pop.text}</pre>
             <div className="mt-3 text-right">
               <button
                 type="button"
@@ -371,6 +394,19 @@ export default function App() {
           </div>
         </>
       )}
+    {/* 固定スコア表示（モバイル用：全幅バー） */}
+    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t shadow px-4 py-2 flex items-center justify-between">
+      <span className="text-xs text-gray-500">合計</span>
+      <span className="text-lg font-bold">{total}</span>
+    </div>
+
+    {/* 固定スコア表示（PC/タブレット用：右下カード） */}
+    <div className="hidden md:flex fixed bottom-4 right-4 z-40">
+      <div className="rounded-xl bg-white border shadow px-4 py-3">
+        <div className="text-xs text-gray-500">合計</div>
+        <div className="text-xl font-bold text-gray-900">{total}</div>
+      </div>
+    </div>
     </div>
   );
 }
