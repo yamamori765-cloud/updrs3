@@ -112,12 +112,6 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ scores, notes }));
   }, [scores, notes]);
 
-  useEffect(() => {
-    const close = () => setPop(p => ({ ...p, open: false }));
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, []);
-
   const total = useMemo(
     () => ITEMS.reduce((sum, it) => sum + Number(scores[it.id] ?? 0), 0),
     [scores]
@@ -134,17 +128,30 @@ export default function App() {
 
   const handleLabelClick = (e, id) => {
     e.stopPropagation();
-    const text = GUIDE_TEXT[id] || "この項目の説明は未設定です。tailwind.config.cjsや本ファイル内のGUIDE_TEXTを編集してください。";
-    // 画面上のマウス座標を基準にする
-    const x = Math.min(e.clientX, window.innerWidth - 320);
-    const y = e.clientY + 8;
-    setPop({
-      open: true,
-      id,
-      text,
-      x,
-      y,
-    });
+    const rect = e.currentTarget.getBoundingClientRect();
+    const text =
+      GUIDE_TEXT[id] ||
+      "この項目の説明は未設定です。GUIDE_TEXT に追記してください。";
+
+    const POP_W = 300;     // 幅
+    const POP_H = 220;     // 想定高さ
+    const M = 8;           // 余白
+
+    // fixed はビューポート基準（scrollX/Yは足さない）
+    let left = rect.left;
+    let top  = rect.bottom + M;
+
+    // 右はみ出し防止
+    const maxLeft = window.innerWidth - POP_W - M;
+    if (left > maxLeft) left = Math.max(M, maxLeft);
+    if (left < M) left = M;
+
+    // 下に入らなければ上に出す
+    if (top + POP_H > window.innerHeight - M) {
+      top = Math.max(M, rect.top - POP_H - M);
+    }
+
+    setPop({ open: true, id, text, x: left, y: top });
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
@@ -344,19 +351,26 @@ export default function App() {
       {/* 説明ポップオーバー（読み取り専用） */}
       {pop.open && (
         <>
-          {/* 透明のクリックキャッチャ（外側クリックで閉じる） */}
-          <div className="fixed inset-0 z-40"></div>
+          {/* 画面全体のオーバーレイ：ここをクリックしたら閉じる */}
           <div
-            className="fixed z-50 inline-block max-w-lg rounded-xl border bg-white p-3 shadow-lg"
-            style={{ top: pop.y, left: pop.x }}
+            className="fixed inset-0 z-40"
+            onClick={() => setPop((p) => ({ ...p, open: false }))}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed z-50 max-w-sm rounded-xl border bg-white p-3 shadow-lg"
+            style={{ top: pop.y, left: pop.x, width: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 text-xs font-semibold text-gray-600">測定方法</div>
-            <pre className="whitespace-pre text-sm leading-relaxed text-gray-800 overflow-x-auto max-w-full">{pop.text}</pre>
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+              {pop.text}
+            </pre>
             <div className="mt-3 text-right">
               <button
                 type="button"
-                onClick={() => setPop(p => ({ ...p, open: false }))}
+                onClick={() => setPop((p) => ({ ...p, open: false }))}
                 className="text-xs px-2 py-1 rounded-lg border hover:bg-gray-50"
               >
                 閉じる
@@ -368,4 +382,3 @@ export default function App() {
     </div>
   );
 }
-
