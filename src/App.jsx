@@ -294,32 +294,57 @@ export default function App() {
 
         {/* 一覧 */}
         <div className="rounded-2xl bg-white shadow overflow-hidden">
-          <table className="w-full text-sm table-fixed">
-            <thead className="bg-gray-100">
+          <table className="w-full text-sm md:table-fixed">
+            <thead className="bg-gray-100 hidden md:table-header-group">
               <tr>
-                <th className="w-12 px-2 py-2 text-left text-xs text-gray-500">ID</th>
+                <th className="w-14 px-2 py-2 text-left text-xs text-gray-500">ID</th>
                 <th className="px-2 py-2 text-left">項目</th>
-                <th className="w-[320px] px-2 py-2 text-left">スコア</th>
+                <th className="md:w-[360px] px-2 py-2 text-left">スコア</th>
               </tr>
             </thead>
             <tbody>
               {ITEMS.map((it) => {
                 return (
                   <tr key={it.id} className="border-t">
-                    <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">{it.id}</td>
-                    <td className="px-2 py-2">
-                      <span className="text-gray-900">{it.label}</span>
-                      <button
-                        type="button"
-                        className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline"
-                        onClick={(e) => handleLabelClick(e, it.id)}
-                        aria-label={`${it.label} の説明を表示`}
-                      >
-                        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
-                      </button>
+                    <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
+                    <td className="px-2 py-2 align-top">
+                      <div className="text-gray-900 text-base leading-6 break-words">
+                        {it.label}
+                        <button
+                          type="button"
+                          className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
+                          onClick={(e) => handleLabelClick(e, it.id)}
+                          aria-label={`${it.label} の説明を表示`}
+                        >
+                          <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
+                        </button>
+                      </div>
+                      {/* モバイル：スコアは下段にフル幅で表示 */}
+                      <div className="mt-2 md:hidden">
+                        <div className="grid grid-cols-5 gap-2">
+                          {[0, 1, 2, 3, 4].map((n) => {
+                            const selected = Number(scores[it.id] ?? -1) === n;
+                            return (
+                              <button
+                                key={n}
+                                onClick={() => setScore(it.id, n)}
+                                className={
+                                  "py-2 rounded-lg border text-sm transition-colors " +
+                                  (selected
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
+                                }
+                                aria-pressed={selected}
+                              >
+                                {n}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-2 py-2">
-                      <div className="overflow-x-auto md:overflow-visible">
+                    <td className="px-2 py-2 hidden md:table-cell">
+                      <div>
                         <div className="flex flex-nowrap gap-2 whitespace-nowrap">
                           {[0, 1, 2, 3, 4].map((n) => {
                             const selected = Number(scores[it.id] ?? -1) === n;
