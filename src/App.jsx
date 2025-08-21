@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * UPDRS Part III – 簡易スコアラー（著作権テキストは未掲載）
@@ -71,13 +71,26 @@ const GUIDE_TEXT = {
 const STORAGE_KEY = "updrs3_simple_v1";
 
 export default function App() {
+  const initialScores = useMemo(() => Object.fromEntries(ITEMS.map(it => [it.id, 0])), []);
   // 現在日時を取得
   const now = new Date();
   const defaultDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
   const defaultHour = String(now.getHours()).padStart(2, "0");
   const defaultMinute = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, "0"); // 5分単位に丸める
 
-  const [scores, setScores] = useState({});
+  const [scores, setScores] = useState(initialScores);
+  const totalRowRef = useRef(null);
+  const [totalRowOnScreen, setTotalRowOnScreen] = useState(true);
+
+  useEffect(() => {
+    const el = totalRowRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      setTotalRowOnScreen(entry.isIntersecting);
+    }, { root: null, threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const [notes, setNotes] = useState("");
   const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0, w: 300 });
   const [userId, setUserId] = useState("");
@@ -122,7 +135,7 @@ export default function App() {
 
   const resetAll = () => {
     if (!confirm("全スコアとメモをクリアします。よろしいですか？")) return;
-    setScores({});
+    setScores(initialScores);
     setNotes("");
   };
 
@@ -203,8 +216,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-24 md:pb-0">
-      <div className="max-w-5xl mx-auto p-6 md:pr-28">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="max-w-5xl mx-auto p-6">
         {/* タイトル */}
         <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">UPDRS Part III（簡易版）</h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
@@ -370,7 +383,7 @@ export default function App() {
                   </tr>
                 );
               })}
-              <tr className="border-t bg-gray-50">
+              <tr ref={totalRowRef} className="border-t bg-gray-50">
                 <td className="px-4 py-3 font-semibold">合計</td>
                 <td className="px-4 py-3 text-xl font-bold" colSpan={2}>{total}</td>
               </tr>
@@ -419,19 +432,12 @@ export default function App() {
           </div>
         </>
       )}
-    {/* 固定スコア表示（モバイル用：全幅バー） */}
-    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t shadow px-4 py-2 flex items-center justify-between">
-      <span className="text-xs text-gray-500">合計</span>
-      <span className="text-lg font-bold">{total}</span>
-    </div>
-
-    {/* 固定スコア表示（PC/タブレット用：右下カード） */}
-    <div className="hidden md:flex fixed bottom-4 right-4 z-40">
-      <div className="rounded-xl bg-white border shadow px-4 py-3">
-        <div className="text-xs text-gray-500">合計</div>
-        <div className="text-xl font-bold text-gray-900">{total}</div>
+    { !totalRowOnScreen && (
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t shadow px-4 py-2 flex items-center justify-between">
+        <span className="text-xs text-gray-500">合計</span>
+        <span className="text-lg font-bold">{total}</span>
       </div>
-    </div>
+    )}
     </div>
   );
 }
