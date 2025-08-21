@@ -303,7 +303,7 @@ export default function App() {
 
         {/* 合計 & メモ */}
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-2xl bg-white p-4 shadow">
+          <div ref={totalRowRef} className="rounded-2xl bg-white p-4 shadow">
             <div className="text-sm text-gray-500">合計</div>
             <div className="text-3xl font-bold">{total}</div>
           </div>
@@ -439,12 +439,14 @@ export default function App() {
           </div>
         </>
       )}
-    <div className="fixed top-4 left-4 z-40">
-      <div className="rounded-2xl bg-white p-3 shadow border">
-        <div className="text-xs text-gray-500">合計</div>
-        <div className="text-xl font-bold">{total}</div>
+    { !totalRowOnScreen && (
+      <div className="fixed top-6 left-6 z-40">
+        <div className="rounded-2xl bg-white p-5 shadow border">
+          <div className="text-sm text-gray-500">合計</div>
+          <div className="text-3xl font-bold">{total}</div>
+        </div>
       </div>
-    </div>
+    )}
     </div>
   );
 }
