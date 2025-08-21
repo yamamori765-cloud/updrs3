@@ -98,6 +98,7 @@ export default function App() {
   const [measureHour, setMeasureHour] = useState(defaultHour);
   const [measureMinute, setMeasureMinute] = useState(defaultMinute);
   const [afterMinutes, setAfterMinutes] = useState("");
+  const [onOffState, setOnOffState] = useState("ON"); // 現在の状態（ON/OFF）
 
   // 時刻プルダウンの選択肢
   const hourOptions = [];
@@ -194,10 +195,11 @@ export default function App() {
       it.label,
       scores[it.id] ?? ""
     ]);
-    // 追加情報（ID, 日付, 時刻, 服薬後, 合計, メモ）も行で追加
+    // 追加情報（ID, 日付, 時刻, 状態, 服薬後, 合計, メモ）も行で追加
     rows.unshift(["ID", userId]);
     rows.unshift(["日付", measureDate]);
     rows.unshift(["時刻", `${measureHour}:${measureMinute}`]);
+    rows.unshift(["状態(ON/OFF)", onOffState]);
     rows.unshift(["服薬後(分)", afterMinutes]);
     rows.push(["合計", total]);
     rows.push(["メモ", notes.replace(/\r?\n/g, " ")]);
@@ -217,11 +219,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-6 pt-20">
         {/* タイトル */}
         <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center">UPDRS Part III（簡易版）</h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
-          個人/教育目的のプロトタイプ。。
+          個人/教育目的のプロトタイプです
         </p>
         {/* ID・日付・測定時刻・服薬後・エクスポートボタン */}
         <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
@@ -266,6 +268,17 @@ export default function App() {
               ))}
             </select>
             <span className="text-xs">分</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">状態</label>
+            <select
+              className="border rounded-lg px-2 py-1 text-sm w-24"
+              value={onOffState}
+              onChange={(e) => setOnOffState(e.target.value)}
+            >
+              <option value="ON">ON</option>
+              <option value="OFF">OFF</option>
+            </select>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-gray-500">服薬後</label>
@@ -383,10 +396,6 @@ export default function App() {
                   </tr>
                 );
               })}
-              <tr ref={totalRowRef} className="border-t bg-gray-50">
-                <td className="px-4 py-3 font-semibold">合計</td>
-                <td className="px-4 py-3 text-xl font-bold" colSpan={2}>{total}</td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -395,10 +404,8 @@ export default function App() {
         <section className="mt-6 rounded-2xl bg-white p-4 shadow">
           <h2 className="font-semibold mb-2">測定時の注意事項</h2>
           <ul className="list-disc pl-6 text-gray-700 space-y-1">
-            <li>タイミング：服薬ON/OFF（例：レボドパ後◯分）を必ずメモ。</li>
-            <li>左右差：利き手/利き足をメモ（再現性向上）。</li>
-            <li>安全：転倒リスクのある項目は介助者配置。</li>
-            <li>数値＋所見の質的特徴（例：律動性低下、途中停止、振戦周波など）をメモ。</li>
+            <li>全身の自動運動や安静時振戦の項目は、すべての検査を通して得られる</li>
+            <li>左検査中にジスキネジアがあったなら，検査に影響したかどうかを明記する</li>
           </ul>
         </section>
       </div>
@@ -432,12 +439,12 @@ export default function App() {
           </div>
         </>
       )}
-    { !totalRowOnScreen && (
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t shadow px-4 py-2 flex items-center justify-between">
-        <span className="text-xs text-gray-500">合計</span>
-        <span className="text-lg font-bold">{total}</span>
+    <div className="fixed top-4 left-4 z-40">
+      <div className="rounded-2xl bg-white p-3 shadow border">
+        <div className="text-xs text-gray-500">合計</div>
+        <div className="text-xl font-bold">{total}</div>
       </div>
-    )}
+    </div>
     </div>
   );
 }
