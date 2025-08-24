@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "./lib/supabase";
 
 /**
  * UPDRS Part III – 簡易スコアラー（著作権テキストは未掲載）
@@ -90,6 +91,21 @@ export default function App() {
     }, { root: null, threshold: 0.5 });
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // --- Supabase 接続テスト（本番/Preview 環境でも判定できる）---
+  useEffect(() => {
+    supabase
+      .from("assessments")
+      .select("id")
+      .limit(1)
+      .then(({ data, error }) => {
+        console.log("[Supabase接続テスト]", {
+          ok: !error,
+          error,
+          sample: data,
+        });
+      });
   }, []);
   const [notes, setNotes] = useState("");
   const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0, w: 300 });
