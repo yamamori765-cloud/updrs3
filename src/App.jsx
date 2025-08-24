@@ -130,8 +130,16 @@ export default function App() {
 
   // --- ログイン/ログアウト関数 ---
   async function sendMagicLink() {
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    alert(error ? error.message : "ログイン用リンクをメールに送りました。開いてログインしてください。");
+    if (!supabase) return alert('Supabaseの設定がされていません（.env.local / Vercel の環境変数を確認）');
+    if (!email) return alert('メールアドレスを入力してください');
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        // Magic Link の遷移先を明示（本番なら Vercel の本番URLになる）
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    alert(error ? error.message : 'ログイン用リンクをメールに送りました。メール内のリンクを開いてログインしてください。');
   }
   async function signOut() {
     await supabase.auth.signOut();
@@ -172,9 +180,10 @@ export default function App() {
     setScores((prev) => ({ ...prev, [id]: Number(v) }));
 
   const resetAll = () => {
-    if (!confirm("全スコアとメモをクリアします。よろしいですか？")) return;
+    if (!confirm('全スコアとメモをクリアします。よろしいですか？')) return;
     setScores(initialScores);
-    setNotes("");
+    setNotes('');
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
   };
 
   const handleLabelClick = (e, id) => {
@@ -362,6 +371,13 @@ export default function App() {
           >
             CSVエクスポート
           </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl bg-white border hover:bg-gray-50 text-sm"
+            onClick={resetAll}
+          >
+            リセット
+          </button>
         </div>
 
         {/* 認証＆保存 操作バー */}
@@ -379,7 +395,7 @@ export default function App() {
                 className="px-3 py-2 rounded bg-blue-600 text-white text-sm"
                 onClick={sendMagicLink}
               >
-                ログインリンク送信
+                送ƒ信
               </button>
             </div>
           ) : (
