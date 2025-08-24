@@ -95,17 +95,18 @@ export default function App() {
 
   // --- Supabase 接続テスト（本番/Preview 環境でも判定できる）---
   useEffect(() => {
+    if (!supabase) {
+      console.warn('[Supabase接続テスト] 環境変数未設定のためスキップ');
+      return;
+    }
     supabase
-      .from("assessments")
-      .select("id")
+      .from('assessments')
+      .select('id')
       .limit(1)
       .then(({ data, error }) => {
-        console.log("[Supabase接続テスト]", {
-          ok: !error,
-          error,
-          sample: data,
-        });
-      });
+        console.log('[Supabase接続テスト]', { ok: !error, error, sample: data });
+      })
+      .catch((e) => console.log('[Supabase接続テスト]', { ok: false, error: e }));
   }, []);
   const [notes, setNotes] = useState("");
   const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0, w: 300 });
@@ -121,6 +122,7 @@ export default function App() {
   const [mine, setMine] = useState([]); // 自分の記録（一覧表示用）
   // --- Supabase 認証状態を監視 ---
   useEffect(() => {
+    if (!supabase) return; // 環境変数未設定時は何もしない
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
@@ -222,30 +224,30 @@ export default function App() {
   };
 
   // --- Supabase: 保存/自分の記録の読込 ---
-  async function saveAssessment() {
-    if (!session?.user) return alert("先にログインしてください");
-    const measured_at = new Date(`${measureDate}T${measureHour}:${measureMinute}:00`);
-    const { error } = await supabase.from('assessments').insert({
-      user_id: session.user.id,
-      patient_code: userId || null,
-      total,
-      items: scores,
-      state: onOffState,
-      measured_at,
-      memo: notes || null,
-    });
-    if (error) alert(error.message); else alert("保存しました");
-  }
+    async function saveAssessment() {
+      if (!session?.user) return alert("先にログインしてください");
+      const measured_at = new Date(`${measureDate}T${measureHour}:${measureMinute}:00`);
+      const { error } = await supabase.from('assessments').insert({
+        user_id: session.user.id,
+        patient_code: userId || null,
+        total,
+        items: scores,
+        state: onOffState,
+        measured_at,
+        memo: notes || null,
+      });
+      if (error) alert(error.message); else alert("保存しました");
+    }
 
-  async function loadMine() {
-    if (!session?.user) return alert("先にログインしてください");
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('id, created_at, patient_code, total, state, measured_at')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (error) alert(error.message); else setMine(data ?? []);
-  }
+    async function loadMine() {
+      if (!session?.user) return alert("先にログインしてください");
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, created_at, patient_code, total, state, measured_at')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) alert(error.message); else setMine(data ?? []);
+    }
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
   const handleExportCSV = () => {
