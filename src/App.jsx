@@ -115,6 +115,25 @@ export default function App() {
   const [measureMinute, setMeasureMinute] = useState(defaultMinute);
   const [afterMinutes, setAfterMinutes] = useState("");
   const [onOffState, setOnOffState] = useState("ON"); // 現在の状態（ON/OFF）
+  // --- Supabase 認証/保存 用 ---
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [mine, setMine] = useState([]); // 自分の記録（一覧表示用）
+  // --- Supabase 認証状態を監視 ---
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // --- ログイン/ログアウト関数 ---
+  async function sendMagicLink() {
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    alert(error ? error.message : "ログイン用リンクをメールに送りました。開いてログインしてください。");
+  }
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
 
   // 時刻プルダウンの選択肢
   const hourOptions = [];
@@ -201,6 +220,32 @@ export default function App() {
 
     setPop({ open: true, id, text, x: left, y: top, w: popW });
   };
+
+  // --- Supabase: 保存/自分の記録の読込 ---
+  async function saveAssessment() {
+    if (!session?.user) return alert("先にログインしてください");
+    const measured_at = new Date(`${measureDate}T${measureHour}:${measureMinute}:00`);
+    const { error } = await supabase.from('assessments').insert({
+      user_id: session.user.id,
+      patient_code: userId || null,
+      total,
+      items: scores,
+      state: onOffState,
+      measured_at,
+      memo: notes || null,
+    });
+    if (error) alert(error.message); else alert("保存しました");
+  }
+
+  async function loadMine() {
+    if (!session?.user) return alert("先にログインしてください");
+    const { data, error } = await supabase
+      .from('assessments')
+      .select('id, created_at, patient_code, total, state, measured_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) alert(error.message); else setMine(data ?? []);
+  }
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
   const handleExportCSV = () => {
@@ -317,6 +362,34 @@ export default function App() {
           </button>
         </div>
 
+        {/* 認証＆保存 操作バー */}
+        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+          {!session ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                placeholder="メールアドレス"
+                className="border rounded px-2 py-1 text-sm w-56"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <button
+                className="px-3 py-2 rounded bg-blue-600 text-white text-sm"
+                onClick={sendMagicLink}
+              >
+                ログインリンク送信
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-600 truncate max-w-[200px]">{session.user.email}</span>
+              <button className="px-3 py-2 rounded bg-white border" onClick={signOut}>ログアウト</button>
+              <button className="px-3 py-2 rounded bg-emerald-600 text-white" onClick={saveAssessment}>保存</button>
+              <button className="px-3 py-2 rounded bg-white border" onClick={loadMine}>自分の記録</button>
+            </div>
+          )}
+        </div>
+
         {/* 合計 & メモ */}
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div ref={totalRowRef} className="rounded-2xl bg-white p-4 shadow">
@@ -415,6 +488,21 @@ export default function App() {
             </tbody>
           </table>
         </div>
+
+        {/* 自分の記録（最新50件） */}
+        {mine.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white p-4 shadow">
+            <div className="font-semibold mb-2">自分の記録（最新50件）</div>
+            <ul className="space-y-1 text-sm">
+              {mine.map((r) => (
+                <li key={r.id} className="flex justify-between border-b py-1">
+                  <span>{new Date(r.created_at).toLocaleString()}</span>
+                  <span className="text-gray-600">合計 {r.total} / 状態 {r.state || '-'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* 簡単な運用メモ（解説の雛形） */}
         <section className="mt-6 rounded-2xl bg-white p-4 shadow">
