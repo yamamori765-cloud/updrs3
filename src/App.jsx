@@ -395,7 +395,7 @@ export default function App() {
                 className="px-3 py-2 rounded bg-blue-600 text-white text-sm"
                 onClick={sendMagicLink}
               >
-                送ƒ信
+                送信
               </button>
             </div>
           ) : (
