@@ -1,3 +1,4 @@
+import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { Link, NavLink, Route, Routes, Navigate, useParams, useNavigate, HashRouter } from 'react-router-dom'
@@ -9,40 +10,89 @@ import { Link, NavLink, Route, Routes, Navigate, useParams, useNavigate, HashRou
  * - メモ（測定条件やコツ）をローカル保存
  */
 
-const ITEMS = [
-  { id: "1",     label: "話し方" },
-  { id: "2",     label: "表情" },
-  { id: "3N",    label: "筋強剛　頸部" },
-  { id: "3RUE",  label: "筋強剛　右上肢" },
-  { id: "3LUE",  label: "筋強剛　左上肢" },
-  { id: "3RLE",  label: "筋強剛　右下肢" },
-  { id: "3LLE",  label: "筋強剛　左下肢" },
-  { id: "4R",    label: "指タッピング　右" },
-  { id: "4L",    label: "指タッピング　左" },
-  { id: "5R",    label: "手の運動　右" },
-  { id: "5L",    label: "手の運動　左" },
-  { id: "6R",    label: "回内回外　右" },
-  { id: "6L",    label: "回内回外　左" },
-  { id: "7R",    label: "つま先タッピング　右" },
-  { id: "7L",    label: "つま先タッピング　左" },
-  { id: "8R",    label: "下肢の敏捷性　右" },
-  { id: "8L",    label: "下肢の敏捷性　左" },
-  { id: "9",     label: "椅子からの立ち上がり" },
-  { id: "10",    label: "歩行" },
-  { id: "11",    label: "すくみ足歩行" },
-  { id: "12",    label: "姿勢の安定性" },
-  { id: "13",    label: "姿勢" },
-  { id: "14",    label: "身体の動作緩慢" },
-  { id: "15R",   label: "手の姿勢時振戦　右" },
-  { id: "15L",   label: "手の姿勢時振戦　左" },
-  { id: "16R",   label: "手の運動時振戦　右" },
-  { id: "16L",   label: "手の運動時振戦　左" },
-  { id: "17RUE", label: "安静時振戦の振幅　右上肢" },
-  { id: "17LUE", label: "安静時振戦の振幅　左上肢" },
-  { id: "17RLE", label: "安静時振戦の振幅　右下肢" },
-  { id: "17LLE", label: "安静時振戦の振幅　左下肢" },
-  { id: "17Lip", label: "安静時振戦の振幅　口唇" },
-  { id: "18",    label: "安静時振戦の持続性" },
+const FORM_ITEMS = [
+  { id: "1", label: "話し方" },
+  { id: "2", label: "表情" },
+  {
+    group: true,
+    id: "rigidity",
+    label: "筋強剛",
+    items: [
+      { id: "3N",    label: "頸部" },
+      { id: "3RUE",  label: "右上肢" },
+      { id: "3LUE",  label: "左上肢" },
+      { id: "3RLE",  label: "右下肢" },
+      { id: "3LLE",  label: "左下肢" },
+    ],
+  },
+  {
+    group: true,
+    id: "tap",
+    label: "指タッピング",
+    items: [
+      { id: "4R", label: "右" },
+      { id: "4L", label: "左" },
+    ],
+  },
+  {
+    group: true,
+    id: "hand",
+    label: "手の運動",
+    items: [
+      { id: "5R", label: "右" },
+      { id: "5L", label: "左" },
+    ],
+  },
+  {
+    group: true,
+    id: "prosup",
+    label: "回内回外",
+    items: [
+      { id: "6R", label: "右" },
+      { id: "6L", label: "左" },
+    ],
+  },
+  { id: "7R", label: "つま先タッピング　右" },
+  { id: "7L", label: "つま先タッピング　左" },
+  { id: "8R", label: "下肢の敏捷性　右" },
+  { id: "8L", label: "下肢の敏捷性　左" },
+  { id: "9",  label: "椅子からの立ち上がり" },
+  { id: "10", label: "歩行" },
+  { id: "11", label: "すくみ足歩行" },
+  { id: "12", label: "姿勢の安定性" },
+  { id: "13", label: "姿勢" },
+  { id: "14", label: "身体の動作緩慢" },
+  {
+    group: true,
+    id: "postural_tremor",
+    label: "姿勢時振戦",
+    items: [
+      { id: "15R", label: "右" },
+      { id: "15L", label: "左" },
+    ],
+  },
+  {
+    group: true,
+    id: "kinetic_tremor",
+    label: "運動時振戦",
+    items: [
+      { id: "16R", label: "右" },
+      { id: "16L", label: "左" },
+    ],
+  },
+  {
+    group: true,
+    id: "rest_tremor",
+    label: "安静時振戦",
+    items: [
+      { id: "17RUE", label: "右上肢" },
+      { id: "17LUE", label: "左上肢" },
+      { id: "17RLE", label: "右下肢" },
+      { id: "17LLE", label: "左下肢" },
+      { id: "17Lip", label: "口唇" },
+      { id: "18",    label: "持続性" },
+    ],
+  },
 ];
 
 /** 固定の測定方法テキスト（編集不可の説明用） */
@@ -86,7 +136,14 @@ const STORAGE_KEY = "updrs3_simple_v1";
 
 function Scorer({ guest = false }) {
   const nav = useNavigate();
-  const initialScores = useMemo(() => Object.fromEntries(ITEMS.map(it => [it.id, 0])), []);
+  const allItems = React.useMemo(
+    () => FORM_ITEMS.flatMap((e) => (e.group ? e.items : [e])),
+    []
+  );
+  const initialScores = useMemo(
+    () => Object.fromEntries(allItems.map((it) => [it.id, 0])),
+    [allItems]
+  );
   // 現在日時を取得
   const now = new Date();
   const defaultDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -172,8 +229,8 @@ function Scorer({ guest = false }) {
   }, [scores, notes]);
 
   const total = useMemo(
-    () => ITEMS.reduce((sum, it) => sum + Number(scores[it.id] ?? 0), 0),
-    [scores]
+    () => allItems.reduce((sum, it) => sum + Number(scores[it.id] ?? 0), 0),
+    [scores, allItems]
   );
 
   // Set score by id
@@ -267,10 +324,15 @@ function Scorer({ guest = false }) {
     // ヘッダー
     const headers = ["項目名", "スコア"];
     // 各項目を行に
-    const rows = ITEMS.map(it => [
-      it.label,
-      scores[it.id] ?? ""
-    ]);
+    const rows = FORM_ITEMS.flatMap((entry) => {
+      if (entry.group) {
+        return entry.items.map((it) => [
+          `${entry.label} ${it.label}`,
+          scores[it.id] ?? "",
+        ]);
+      }
+      return [[entry.label, scores[entry.id] ?? ""]];
+    });
     // 追加情報（ID, 日付, 時刻, 状態, 服薬後, 合計, メモ）も行で追加
     rows.unshift(["ID", userId]);
     rows.unshift(["日付", measureDate]);
@@ -434,68 +496,118 @@ function Scorer({ guest = false }) {
               </tr>
             </thead>
             <tbody>
-              {ITEMS.map((it) => {
+              {FORM_ITEMS.map((entry) => {
+                if (!entry.group) {
+                  // 単独項目は従来どおり1行表示
+                  const it = entry;
+                  return (
+                    <tr key={it.id} className="border-t">
+                      <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
+                      <td className="px-2 py-2 align-top">
+                        <div className="text-gray-900 text-base leading-6 break-words">
+                          {it.label}
+                          <button
+                            type="button"
+                            className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
+                            onClick={(e) => handleLabelClick(e, it.id)}
+                            aria-label={`${it.label} の説明を表示`}
+                          >
+                            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
+                          </button>
+                        </div>
+                        {/* モバイル：スコアは下段にフル幅で表示 */}
+                        <div className="mt-2 md:hidden">
+                          <div className="grid grid-cols-5 gap-2">
+                            {[0, 1, 2, 3, 4].map((n) => {
+                              const selected = Number(scores[it.id] ?? -1) === n;
+                              return (
+                                <button
+                                  key={n}
+                                  onClick={() => setScore(it.id, n)}
+                                  className={
+                                    "py-2 rounded-lg border text-sm transition-colors " +
+                                    (selected
+                                      ? "bg-blue-500 text-white border-blue-500"
+                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
+                                  }
+                                  aria-pressed={selected}
+                                >
+                                  {n}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 hidden md:table-cell">
+                        <div>
+                          <div className="flex flex-nowrap gap-2 whitespace-nowrap">
+                            {[0, 1, 2, 3, 4].map((n) => {
+                              const selected = Number(scores[it.id] ?? -1) === n;
+                              return (
+                                <button
+                                  key={n}
+                                  onClick={() => setScore(it.id, n)}
+                                  className={
+                                    "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
+                                    (selected
+                                      ? "bg-blue-500 text-white border-blue-500"
+                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
+                                  }
+                                  aria-pressed={selected}
+                                >
+                                  {n}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+                // グループ項目は1行の中に小項目（右/左など）を並べる
                 return (
-                  <tr key={it.id} className="border-t">
-                    <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
-                    <td className="px-2 py-2 align-top">
-                      <div className="text-gray-900 text-base leading-6 break-words">
-                        {it.label}
-                        <button
-                          type="button"
-                          className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
-                          onClick={(e) => handleLabelClick(e, it.id)}
-                          aria-label={`${it.label} の説明を表示`}
-                        >
-                          <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
-                        </button>
-                      </div>
-                      {/* モバイル：スコアは下段にフル幅で表示 */}
-                      <div className="mt-2 md:hidden">
-                        <div className="grid grid-cols-5 gap-2">
-                          {[0, 1, 2, 3, 4].map((n) => {
-                            const selected = Number(scores[it.id] ?? -1) === n;
-                            return (
-                              <button
-                                key={n}
-                                onClick={() => setScore(it.id, n)}
-                                className={
-                                  "py-2 rounded-lg border text-sm transition-colors " +
-                                  (selected
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                                }
-                                aria-pressed={selected}
-                              >
-                                {n}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                  <tr key={entry.id} className="border-t align-top">
+                    <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap">—</td>
+                    <td className="px-2 py-2">
+                      <div className="text-gray-900 text-base leading-6 break-words">{entry.label}</div>
                     </td>
-                    <td className="px-2 py-2 hidden md:table-cell">
-                      <div>
-                        <div className="flex flex-nowrap gap-2 whitespace-nowrap">
-                          {[0, 1, 2, 3, 4].map((n) => {
-                            const selected = Number(scores[it.id] ?? -1) === n;
-                            return (
-                              <button
-                                key={n}
-                                onClick={() => setScore(it.id, n)}
-                                className={
-                                  "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
-                                  (selected
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                                }
-                                aria-pressed={selected}
-                              >
-                                {n}
-                              </button>
-                            );
-                          })}
-                        </div>
+                    <td className="px-2 py-2">
+                      <div className="space-y-2">
+                        {entry.items.map((it) => (
+                          <div key={it.id} className="flex items-center gap-3 flex-wrap">
+                            <span className="w-20 shrink-0 text-xs text-gray-600">{it.label}</span>
+                            <div className="flex gap-2">
+                              {[0,1,2,3,4].map((n) => {
+                                const selected = Number(scores[it.id] ?? -1) === n;
+                                return (
+                                  <button
+                                    key={n}
+                                    onClick={() => setScore(it.id, n)}
+                                    className={
+                                      "w-10 text-center px-2 py-2 border rounded-lg transition-colors " +
+                                      (selected
+                                        ? "bg-blue-500 text-white border-blue-500"
+                                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
+                                    }
+                                    aria-pressed={selected}
+                                  >
+                                    {n}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <button
+                              type="button"
+                              className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
+                              onClick={(e) => handleLabelClick(e, it.id)}
+                              aria-label={`${entry.label} ${it.label} の説明を表示`}
+                            >
+                              <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </td>
                   </tr>
