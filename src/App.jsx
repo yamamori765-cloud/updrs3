@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
-import { Link, NavLink, Route, Routes, Navigate, useParams, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, Navigate, useParams, useNavigate, HashRouter } from 'react-router-dom'
 
 /**
  * UPDRS Part III – 簡易スコアラー（著作権テキストは未掲載）
@@ -572,8 +572,8 @@ function Scorer({ guest = false }) {
 }
 
 
-// ルーティングの枠（これが新しい App）
-export default function App() {
+// ルーティングの枠（AppRoutesをHashRouterでラップする新しいApp）
+function AppRoutes() {
   const [session, setSession] = useState(null);
   const [guest, setGuest] = useState(false);
   const navigate = useNavigate();
@@ -637,6 +637,14 @@ export default function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <AppRoutes />
+    </HashRouter>
   );
 }
 
