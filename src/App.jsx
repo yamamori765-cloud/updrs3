@@ -1,7 +1,7 @@
 import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
-import { Link, NavLink, Route, Routes, Navigate, useParams, useNavigate, HashRouter } from 'react-router-dom'
+import { Route, Routes, Navigate, useNavigate, HashRouter } from 'react-router-dom'
 
 /**
  * UPDRS Part III – 簡易スコアラー（著作権テキストは未掲載）
@@ -680,70 +680,16 @@ function Scorer({ guest = false }) {
 }
 
 
-// ルーティングの枠（AppRoutesをHashRouterでラップする新しいApp）
+// ルーティングの枠（ログインなしシンプル版）
 function AppRoutes() {
-  const [session, setSession] = useState(null);
-  const [guest, setGuest] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  // ゲストモード初期化（localStorageから）
-  useEffect(() => {
-    try {
-      const g = localStorage.getItem('guest_mode');
-      setGuest(g === '1');
-    } catch {}
-  }, []);
-
-  function enterGuest() {
-    try { localStorage.setItem('guest_mode', '1'); } catch {}
-    setGuest(true);
-    navigate('/app');
-  }
-
-  function exitGuest() {
-    try { localStorage.removeItem('guest_mode'); } catch {}
-    setGuest(false);
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
-        <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="font-bold">UPDRS3</Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <NavLink to="/app"     className={({isActive})=> isActive ? 'text-blue-600' : 'text-gray-600'}>入力</NavLink>
-            <NavLink to="/records" className={({isActive})=> isActive ? 'text-blue-600' : 'text-gray-600'}>記録</NavLink>
-            {guest && <span className="px-2 py-0.5 text-xs border rounded-full text-gray-600">ゲスト</span>}
-            {!session
-              ? <NavLink to="/" className={({isActive})=> isActive ? 'text-blue-600' : 'text-gray-600'}>ログイン</NavLink>
-              : <button onClick={()=>{exitGuest(); supabase?.auth.signOut();}} className="text-gray-600">ログアウト</button>}
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto p-4">
+      <div className="max-w-5xl mx-auto p-4">
         <Routes>
-          {/* 最初はログイン画面のみ */}
-          <Route path="/" element={<Login onGuest={enterGuest} />} />
-
-          {/* 入力（スコアラー） */}
-          <Route path="/app" element={<Scorer guest={guest} />} />
-
-          {/* 記録（ログイン必須） */}
-          <Route path="/records" element={<RequireAuth session={session}><Records /></RequireAuth>} />
-          <Route path="/records/:id" element={<RequireAuth session={session}><RecordDetail /></RequireAuth>} />
-
-          {/* 不明URLは / へ */}
+          <Route path="/" element={<Scorer guest={true} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
+      </div>
     </div>
   );
 }
@@ -753,159 +699,5 @@ export default function App() {
     <HashRouter>
       <AppRoutes />
     </HashRouter>
-  );
-}
-
-// ログイン必須のガード
-function RequireAuth({ session, children }) {
-  if (!session) return <Navigate to="/login" replace />;
-  return children;
-}
-
-/* ======= ここから：追加ページ（シンプル版） ======= */
-
-function Login({ onGuest }) {
-  const nav = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav('/app', { replace: true }); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) nav('/app', { replace: true }); });
-    return () => sub.subscription.unsubscribe();
-  }, [nav]);
-
-  async function signInWithPassword() {
-    if (!supabase) return alert('Supabase未設定');
-    if (!email || !password) return alert('メールとパスワードを入力してください');
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) alert(error.message);
-  }
-
-  async function signUp() {
-    if (!supabase) return alert('Supabase未設定');
-    if (!email || !password) return alert('メールとパスワードを入力してください');
-    setBusy(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    setBusy(false);
-    if (error) return alert(error.message);
-    if (data.session) nav('/app', { replace: true });
-  }
-
-  return (
-    <div className="max-w-md mx-auto bg-white rounded-2xl p-6 shadow">
-      <h2 className="text-xl font-semibold mb-1 text-center">ログイン</h2>
-      <p className="text-xs text-gray-500 mb-4 text-center">データ保存にはログインが必要です。ゲストは保存できません。</p>
-
-      <label className="block text-sm mb-1">メール</label>
-      <input
-        type="email"
-        className="w-full border rounded px-3 py-2 mb-3"
-        placeholder="you@example.com"
-        value={email}
-        onChange={e=>setEmail(e.target.value)}
-      />
-
-      <label className="block text-sm mb-1">パスワード</label>
-      <input
-        type="password"
-        className="w-full border rounded px-3 py-2 mb-4"
-        placeholder="8文字以上"
-        value={password}
-        onChange={e=>setPassword(e.target.value)}
-      />
-
-      <div className="flex gap-2">
-        <button disabled={busy} onClick={signInWithPassword} className="flex-1 px-4 py-2 rounded bg-blue-600 text-white">ログイン</button>
-        <button disabled={busy} onClick={signUp} className="px-4 py-2 rounded border">新規登録</button>
-      </div>
-
-      <div className="mt-6 text-center">
-        <button type="button" onClick={onGuest} className="px-4 py-2 rounded border text-gray-700 w-full">ゲストとして使う（保存なし）</button>
-      </div>
-    </div>
-  );
-}
-
-// /records （一覧）
-function Records() {
-  const [rows, setRows] = useState([]);
-  useEffect(()=>{
-    if (!supabase) return;
-    supabase.from('assessments')
-      .select('id, created_at, total, state, patient_code')
-      .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({data, error})=>{
-        if (error) alert(error.message);
-        else setRows(data ?? []);
-      });
-  },[]);
-  return (
-    <div className="bg-white rounded-2xl p-4 shadow">
-      <h2 className="font-semibold mb-3">自分の記録</h2>
-      <ul className="divide-y">
-        {rows.map(r=>(
-          <li key={r.id} className="py-2 flex items-center justify-between">
-            <div>
-              <div className="text-sm">{new Date(r.created_at).toLocaleString()}</div>
-              <div className="text-xs text-gray-500">合計 {r.total} / 状態 {r.state || '-'} / ID {r.patient_code || '-'}</div>
-            </div>
-            <Link to={`/records/${r.id}`} className="text-blue-600 text-sm">詳細</Link>
-          </li>
-        ))}
-        {rows.length===0 && <li className="py-6 text-center text-gray-500">まだ記録がありません</li>}
-      </ul>
-    </div>
-  );
-}
-
-// /records/:id （詳細）
-function RecordDetail() {
-  const { id } = useParams();
-  const [rec, setRec] = useState(null);
-
-  useEffect(()=>{
-    if (!supabase || !id) return;
-    supabase.from('assessments').select('*').eq('id', id).single()
-      .then(({data, error})=>{
-        if (error) alert(error.message);
-        else setRec(data);
-      });
-  },[id]);
-
-  if (!rec) return <div className="text-gray-500">読み込み中…</div>;
-
-  const items = rec.items || {};
-  return (
-    <div className="bg-white rounded-2xl p-4 shadow">
-      <h2 className="font-semibold mb-3">記録詳細</h2>
-      <div className="text-sm text-gray-600 mb-2">
-        実施 {new Date(rec.measured_at ?? rec.created_at).toLocaleString()} / 合計 {rec.total} / 状態 {rec.state || '-'} / ID {rec.patient_code || '-'}
-      </div>
-      <table className="w-full text-sm">
-        <thead className="bg-gray-100">
-          <tr><th className="text-left p-2">項目</th><th className="text-left p-2">スコア</th></tr>
-        </thead>
-        <tbody>
-          {Object.entries(items).map(([k,v])=>(
-            <tr key={k} className="border-t">
-              <td className="p-2">{k}</td>
-              <td className="p-2">{v}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {rec.memo && (
-        <div className="mt-4">
-          <div className="text-xs text-gray-500 mb-1">メモ</div>
-          <div className="whitespace-pre-wrap text-sm">{rec.memo}</div>
-        </div>
-      )}
-    </div>
   );
 }
