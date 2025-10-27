@@ -19,7 +19,7 @@ const FORM_ITEMS = [
     number: 3,
     label: "筋強剛",
     items: [
-      { id: "3N",    label: "頸部" },
+      { id: "3N",    label: "　頸部" },
       { id: "3RUE",  label: "右上肢" },
       { id: "3LUE",  label: "左上肢" },
       { id: "3RLE",  label: "右下肢" },
@@ -115,7 +115,7 @@ const FORM_ITEMS = [
       { id: "17LUE", label: "左上肢" },
       { id: "17RLE", label: "右下肢" },
       { id: "17LLE", label: "左下肢" },
-      { id: "17Lip", label: "口唇" },
+      { id: "17Lip", label: "　口唇" },
     ],
   },
   // 18は個別扱い
@@ -517,7 +517,7 @@ function Scorer({ guest = false }) {
           <table className="w-full text-sm table-auto">
             <thead className="bg-gray-100 hidden md:table-header-group">
               <tr>
-                <th className="w-14 px-2 py-2 text-left text-xs text-gray-500">ID</th>
+                <th className="w-10 px-1 py-2 text-left text-xs text-gray-500">ID</th>
                 <th className="px-2 py-2 text-left">項目</th>
                 <th className="md:w-[360px] px-2 py-2 text-left">スコア</th>
               </tr>
@@ -528,7 +528,7 @@ function Scorer({ guest = false }) {
                   const it = entry;
                   return (
                     <tr key={it.id} className="border-t">
-                      <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
+                      <td className="px-1 py-2 font-mono text-xs text-gray-400 whitespace-nowrap align-top text-center">{entry.group ? entry.number : it.id}</td>
                       <td colSpan={2} className="p-3 align-top">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                           <div className="text-gray-900 text-base leading-6 flex items-center gap-2 whitespace-nowrap">
@@ -565,7 +565,7 @@ function Scorer({ guest = false }) {
                   <React.Fragment key={entry.id}>
                     {/* 大項目 */}
                     <tr key={entry.id} className="border-t">
-                      <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{entry.number}</td>
+                      <td className="px-1 py-2 font-mono text-xs text-gray-400 whitespace-nowrap align-top text-center">{entry.number}</td>
                       <td className="px-2 py-2 align-top" colSpan={2}>
                         <div className="text-gray-900 text-base leading-6 flex items-center gap-2 whitespace-nowrap">
                           <span>{entry.label}</span>
@@ -583,7 +583,7 @@ function Scorer({ guest = false }) {
                     {/* サブ項目（小文字・薄文字、flex+gridボタン） */}
                     {entry.items.map((it) => (
                       <tr key={it.id}>
-                        <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
+                        <td className="px-1 py-2 font-mono text-xs text-gray-400 whitespace-nowrap align-top text-center"></td>
                         <td colSpan={2} className="p-3 align-top">
                           <div className="flex items-center justify-between gap-2 whitespace-nowrap">
                             <div className="text-xs text-gray-500">{it.label}</div>
