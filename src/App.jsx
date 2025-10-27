@@ -514,7 +514,7 @@ function Scorer({ guest = false }) {
 
         {/* 一覧 */}
         <div className="rounded-2xl bg-white shadow overflow-hidden">
-          <table className="w-full text-sm md:table-fixed">
+          <table className="w-full text-sm table-auto">
             <thead className="bg-gray-100 hidden md:table-header-group">
               <tr>
                 <th className="w-14 px-2 py-2 text-left text-xs text-gray-500">ID</th>
@@ -525,121 +525,83 @@ function Scorer({ guest = false }) {
             <tbody>
               {FORM_ITEMS.map((entry) => {
                 if (!entry.group) {
-                  // 単独項目は従来どおり1行表示
                   const it = entry;
                   return (
                     <tr key={it.id} className="border-t">
                       <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="text-gray-900 text-base leading-6 break-words">
-                          {it.label}
-                          <button
-                            type="button"
-                            className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
-                            onClick={(e) => handleLabelClick(e, it.id)}
-                            aria-label={`${it.label} の説明を表示`}
-                          >
-                            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
-                          </button>
-                        </div>
-                        {/* モバイル：スコアは下段にフル幅で表示 */}
-                        <div className="mt-2 md:hidden">
-                          <div className="grid grid-cols-5 gap-2">
-                            {[0, 1, 2, 3, 4].map((n) => {
-                              const selected = Number(scores[it.id] ?? -1) === n;
-                              return (
-                                <button
-                                  key={n}
-                                  onClick={() => setScore(it.id, n)}
-                                  className={
-                                    "py-2 rounded-lg border text-sm transition-colors " +
-                                    (selected
-                                      ? "bg-blue-500 text-white border-blue-500"
-                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                                  }
-                                  aria-pressed={selected}
-                                >
-                                  {n}
-                                </button>
-                              );
-                            })}
+                      <td colSpan={2} className="p-3 align-top">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="text-gray-900 text-base leading-6 flex items-center gap-2">
+                            <span>{it.label}</span>
+                            <button
+                              onClick={(e) => handleLabelClick(e, it.id)}
+                              className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700"
+                            >
+                              説明
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 hidden md:table-cell">
-                        <div>
-                          <div className="flex flex-nowrap gap-2 whitespace-nowrap">
-                            {[0, 1, 2, 3, 4].map((n) => {
-                              const selected = Number(scores[it.id] ?? -1) === n;
-                              return (
-                                <button
-                                  key={n}
-                                  onClick={() => setScore(it.id, n)}
-                                  className={
-                                    "w-12 text-center px-2 py-2 border rounded-lg transition-colors duration-200 text-sm " +
-                                    (selected
-                                      ? "bg-blue-500 text-white border-blue-500"
-                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                                  }
-                                  aria-pressed={selected}
-                                >
-                                  {n}
-                                </button>
-                              );
-                            })}
+                          <div className="grid grid-cols-5 gap-2 w-full sm:w-auto">
+                            {[0,1,2,3,4].map((n)=>(
+                              <button
+                                key={n}
+                                onClick={()=>setScore(it.id,n)}
+                                className={`py-2 rounded-lg border text-sm w-full ${
+                                  Number(scores[it.id]??-1)===n
+                                  ? "bg-blue-500 text-white border-blue-500"
+                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            ))}
                           </div>
                         </div>
                       </td>
                     </tr>
                   );
                 }
-                // グループ項目は大項目行（表情などと同じスタイル）＋サブ項目行で構成
+                // グループ項目
                 return (
                   <React.Fragment key={entry.id}>
-                    {/* 大項目（表情などと同じスタイル） */}
+                    {/* 大項目 */}
                     <tr key={entry.id} className="border-t">
                       <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{entry.number}</td>
-                      <td className="px-2 py-2 align-top">
-                        <div className="text-gray-900 text-base leading-6 break-words">
-                          {entry.label}
+                      <td className="px-2 py-2 align-top" colSpan={2}>
+                        <div className="text-gray-900 text-base leading-6 flex items-center gap-2">
+                          <span>{entry.label}</span>
                           <button
                             type="button"
-                            className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 focus:outline-none no-underline align-middle"
+                            className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700"
                             onClick={(e) => handleLabelClick(e, entry.items[0].id)}
                             aria-label={`${entry.label} の説明を表示`}
                           >
-                            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700">説明</span>
+                            説明
                           </button>
                         </div>
                       </td>
-                      <td></td>
                     </tr>
-                    {/* サブ項目（小文字・薄文字） */}
+                    {/* サブ項目（小文字・薄文字、flex+gridボタン） */}
                     {entry.items.map((it) => (
                       <tr key={it.id}>
                         <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
-                        <td className="px-2 py-2 align-top">
-                          <span className="text-xs text-gray-500">{it.label}</span>
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="flex gap-2">
-                            {[0, 1, 2, 3, 4].map((n) => {
-                              const selected = Number(scores[it.id] ?? -1) === n;
-                              return (
+                        <td colSpan={2} className="p-3 align-top">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="text-xs text-gray-500">{it.label}</div>
+                            <div className="grid grid-cols-5 gap-2 w-full sm:w-auto">
+                              {[0,1,2,3,4].map((n)=>(
                                 <button
                                   key={n}
-                                  onClick={() => setScore(it.id, n)}
-                                  className={
-                                    "w-12 text-center px-2 py-2 border rounded-lg transition-colors " +
-                                    (selected
-                                      ? "bg-blue-500 text-white border-blue-500"
-                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100")
-                                  }
+                                  onClick={()=>setScore(it.id,n)}
+                                  className={`py-2 rounded-lg border text-sm w-full ${
+                                    Number(scores[it.id]??-1)===n
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                  }`}
                                 >
                                   {n}
                                 </button>
-                              );
-                            })}
+                              ))}
+                            </div>
                           </div>
                         </td>
                       </tr>
