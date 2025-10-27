@@ -531,21 +531,21 @@ function Scorer({ guest = false }) {
                       <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
                       <td colSpan={2} className="p-3 align-top">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="text-gray-900 text-base leading-6 flex items-center gap-2">
+                          <div className="text-gray-900 text-base leading-6 flex items-center gap-2 whitespace-nowrap">
                             <span>{it.label}</span>
                             <button
                               onClick={(e) => handleLabelClick(e, it.id)}
-                              className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700"
+                              className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700 shrink-0"
                             >
                               説明
                             </button>
                           </div>
-                          <div className="grid grid-cols-5 gap-2 w-full sm:w-auto">
+                          <div className="w-full grid grid-cols-5 gap-2 sm:flex sm:flex-nowrap sm:gap-2 sm:justify-end">
                             {[0,1,2,3,4].map((n)=>(
                               <button
                                 key={n}
                                 onClick={()=>setScore(it.id,n)}
-                                className={`py-2 rounded-lg border text-sm w-full ${
+                                className={`py-2 rounded-lg border text-sm w-full sm:w-12 md:w-14 lg:w-16 ${
                                   Number(scores[it.id]??-1)===n
                                   ? "bg-blue-500 text-white border-blue-500"
                                   : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
@@ -567,11 +567,11 @@ function Scorer({ guest = false }) {
                     <tr key={entry.id} className="border-t">
                       <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{entry.number}</td>
                       <td className="px-2 py-2 align-top" colSpan={2}>
-                        <div className="text-gray-900 text-base leading-6 flex items-center gap-2">
+                        <div className="text-gray-900 text-base leading-6 flex items-center gap-2 whitespace-nowrap">
                           <span>{entry.label}</span>
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700"
+                            className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 border-gray-300 text-gray-700 shrink-0"
                             onClick={(e) => handleLabelClick(e, entry.items[0].id)}
                             aria-label={`${entry.label} の説明を表示`}
                           >
@@ -585,14 +585,14 @@ function Scorer({ guest = false }) {
                       <tr key={it.id}>
                         <td className="px-2 py-2 font-mono text-xs text-gray-500 whitespace-nowrap align-top">{it.id}</td>
                         <td colSpan={2} className="p-3 align-top">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex items-center justify-between gap-2 whitespace-nowrap">
                             <div className="text-xs text-gray-500">{it.label}</div>
-                            <div className="grid grid-cols-5 gap-2 w-full sm:w-auto">
+                            <div className="w-full sm:w-auto grid grid-cols-5 gap-2 sm:flex sm:flex-nowrap sm:gap-2 sm:justify-end">
                               {[0,1,2,3,4].map((n)=>(
                                 <button
                                   key={n}
                                   onClick={()=>setScore(it.id,n)}
-                                  className={`py-2 rounded-lg border text-sm w-full ${
+                                  className={`py-2 rounded-lg border text-sm w-full sm:w-12 md:w-14 lg:w-16 ${
                                     Number(scores[it.id]??-1)===n
                                     ? "bg-blue-500 text-white border-blue-500"
                                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
