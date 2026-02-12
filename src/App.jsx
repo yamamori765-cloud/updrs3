@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import QRCode from "qrcode";
 import { FORM_ITEMS } from "./constants/formItems";
 import { GUIDE_TEXT } from "./constants/guideText";
 import { supabase } from "./lib/supabase";
@@ -63,6 +64,23 @@ function getPopoverLayout(text, rect) {
   return { x: left, y: top, w };
 }
 
+/** 項目ID → 日本語ラベル（電子カルテ用・QR用） */
+const ITEM_LABELS = (() => {
+  const map = {};
+  FORM_ITEMS.forEach((entry) => {
+    if (entry.group) {
+      entry.items.forEach((it) => {
+        map[it.id] = entry.label + it.label.trim();
+      });
+    } else {
+      map[entry.id] = entry.label;
+    }
+  });
+  return map;
+})();
+
+const CRLF = "\r\n";
+
 function Scorer() {
   const allItems = React.useMemo(
     () => FORM_ITEMS.flatMap((e) => (e.group ? e.items : [e])),
@@ -109,6 +127,9 @@ function Scorer() {
   }, []);
   const [notes, setNotes] = useState("");
   const [pop, setPop] = useState({ open: false, id: null, text: "", x: 0, y: 0, w: 300 });
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [qrText, setQrText] = useState("");
   const [userId, setUserId] = useState("");
   const [measureDate, setMeasureDate] = useState(defaultDate);
   const [measureHour, setMeasureHour] = useState(defaultHour);
@@ -200,6 +221,46 @@ function Scorer() {
     if (error) alert(error.message);
     else setMine(data ?? []);
   }
+
+  /** 現在の入力内容を日本語・改行付きテキストにまとめる（QRコード・電子カルテ用・Windows対応CRLF） */
+  const buildQrPayload = () => {
+    const lines = [
+      "【UPDRS Part III 簡易スコア】",
+      "",
+      `患者ID: ${userId || ""}`,
+      `日付: ${measureDate}`,
+      `測定時刻: ${measureHour}:${measureMinute}`,
+      `状態: ${onOffState}`,
+      `服薬後: ${afterMinutes || ""} 分`,
+      `合計: ${total}`,
+      "",
+      "【項目スコア】",
+      ...allItems.map((it) => `${ITEM_LABELS[it.id] ?? it.id}: ${scores[it.id] ?? 0}`),
+      "",
+      "【メモ】",
+      notes || "",
+    ];
+    return lines.join(CRLF);
+  };
+
+  /** QRコードを生成してモーダル表示 */
+  const handleShowQR = async () => {
+    const text = buildQrPayload();
+    try {
+      const dataUrl = await QRCode.toDataURL(text, { width: 280, margin: 2 });
+      setQrText(text);
+      setQrDataUrl(dataUrl);
+      setQrOpen(true);
+    } catch (e) {
+      alert("QRコードの生成に失敗しました: " + (e.message || e));
+    }
+  };
+
+  /** テキストをコピー（BOM付きUTF-8でWindowsの文字化けを防止） */
+  const handleCopyQrText = () => {
+    const BOM = "\uFEFF";
+    navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
+  };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
   const handleExportCSV = () => {
@@ -318,6 +379,13 @@ function Scorer() {
             onClick={handleExportCSV}
           >
             CSVエクスポート
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-xl bg-white border hover:bg-gray-50 text-sm"
+            onClick={handleShowQR}
+          >
+            QRコード生成
           </button>
           <button
             type="button"
@@ -460,11 +528,53 @@ function Scorer() {
         <section className="mt-6 rounded-2xl bg-white p-4 shadow">
           <h2 className="font-semibold mb-2">測定時の注意事項</h2>
           <ul className="list-disc pl-6 text-gray-700 space-y-1">
-            <li>全身の自動運動や安静時振戦の項目は、すべての検査を通して得られる</li>
-            <li>左検査中にジスキネジアがあったなら，検査に影響したかどうかを明記する</li>
+            <li>全身の自動運動や安静時振戦の項目は、すべての検査を通して観察する</li>
+            <li>検査中にジスキネジアがあったなら，検査に影響したかどうかを記載する</li>
           </ul>
         </section>
       </div>
+
+      {/* QRコードモーダル */}
+      {qrOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setQrOpen(false)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="QRコード"
+            className="fixed left-1/2 top-1/2 z-50 w-[min(90vw,340px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 text-center font-semibold text-gray-800">QRコード（評価データ）</div>
+            <div className="flex justify-center rounded-xl bg-white p-3">
+              <img src={qrDataUrl} alt="UPDRS3 評価データのQRコード" className="rounded-lg" />
+            </div>
+            <div className="mt-3">
+              <div className="mb-1 text-xs text-gray-500">QRの内容（日本語・改行付き・Windows用CRLF）</div>
+              <textarea
+                readOnly
+                className="w-full rounded-lg border bg-gray-50 p-2 text-xs font-mono whitespace-pre"
+                rows={10}
+                value={qrText}
+              />
+              <button
+                type="button"
+                className="mt-2 w-full rounded-lg border bg-gray-100 py-2 text-sm hover:bg-gray-200"
+                onClick={handleCopyQrText}
+              >
+                テキストをコピー（BOM付きUTF-8）
+              </button>
+            </div>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-xl border bg-gray-100 py-2 text-sm hover:bg-gray-200"
+              onClick={() => setQrOpen(false)}
+            >
+              閉じる
+            </button>
+          </div>
+        </>
+      )}
 
       {/* 説明ポップオーバー（読み取り専用） */}
       {pop.open && (
