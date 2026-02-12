@@ -1,168 +1,69 @@
-import React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { FORM_ITEMS } from "./constants/formItems";
+import { GUIDE_TEXT } from "./constants/guideText";
 import { supabase } from "./lib/supabase";
-import { Route, Routes, Navigate, useNavigate, HashRouter } from 'react-router-dom'
 
-/**
- * UPDRS Part III – 簡易スコアラー（著作権テキストは未掲載）
- * - 0–4ボタン（選択中は青）
- * - 一覧表示＆合計
- * - メモ（測定条件やコツ）をローカル保存
- */
-
-const FORM_ITEMS = [
-  { id: "1", label: "話し方" },
-  { id: "2", label: "表情" },
-  {
-    group: true,
-    id: "rigidity",
-    number: 3,
-    label: "筋強剛",
-    items: [
-      { id: "3N",    label: "　頸部" },
-      { id: "3RUE",  label: "右上肢" },
-      { id: "3LUE",  label: "左上肢" },
-      { id: "3RLE",  label: "右下肢" },
-      { id: "3LLE",  label: "左下肢" },
-    ],
-  },
-  {
-    group: true,
-    id: "tap",
-    number: 4,
-    label: "指タッピング",
-    items: [
-      { id: "4R", label: "右" },
-      { id: "4L", label: "左" },
-    ],
-  },
-  {
-    group: true,
-    id: "hand",
-    number: 5,
-    label: "手の運動",
-    items: [
-      { id: "5R", label: "右" },
-      { id: "5L", label: "左" },
-    ],
-  },
-  {
-    group: true,
-    id: "prosup",
-    number: 6,
-    label: "回内回外",
-    items: [
-      { id: "6R", label: "右" },
-      { id: "6L", label: "左" },
-    ],
-  },
-  // 新規グループ: つま先タッピング
-  {
-    group: true,
-    id: "toe_tapping",
-    number: 7,
-    label: "つま先タッピング",
-    items: [
-      { id: "7R", label: "右" },
-      { id: "7L", label: "左" },
-    ],
-  },
-  // 新規グループ: 下肢の敏捷性
-  {
-    group: true,
-    id: "leg_agility",
-    number: 8,
-    label: "下肢の敏捷性",
-    items: [
-      { id: "8R", label: "右" },
-      { id: "8L", label: "左" },
-    ],
-  },
-  { id: "9",  label: "椅子からの立ち上がり" },
-  { id: "10", label: "歩行" },
-  { id: "11", label: "すくみ足歩行" },
-  { id: "12", label: "姿勢の安定性" },
-  { id: "13", label: "姿勢" },
-  { id: "14", label: "身体の動作緩慢" },
-  {
-    group: true,
-    id: "postural_tremor",
-    number: 15,
-    label: "姿勢時振戦",
-    items: [
-      { id: "15R", label: "右" },
-      { id: "15L", label: "左" },
-    ],
-  },
-  {
-    group: true,
-    id: "kinetic_tremor",
-    number: 16,
-    label: "運動時振戦",
-    items: [
-      { id: "16R", label: "右" },
-      { id: "16L", label: "左" },
-    ],
-  },
-  // 安静時振戦グループから18(持続性)を除外
-  {
-    group: true,
-    id: "rest_tremor",
-    number: 17,
-    label: "安静時振戦",
-    items: [
-      { id: "17RUE", label: "右上肢" },
-      { id: "17LUE", label: "左上肢" },
-      { id: "17RLE", label: "右下肢" },
-      { id: "17LLE", label: "左下肢" },
-      { id: "17Lip", label: "　口唇" },
-    ],
-  },
-  // 18は個別扱い
-  { id: "18", label: "安静時振戦の持続性" },
-];
-
-/** 固定の測定方法テキスト（編集不可の説明用） */
-const GUIDE_TEXT = {
-  "1": "0 正常\n1 抑揚や声量に問題あるが理解可能\n2 抑揚，声量に問題あり一部単語がわかりにくい\n3 発話内容に理解しづらい点がある\n4 殆どの発話内容が理解しにくい",
-  "2": "0 正常\n1 瞬きの頻度が少ない\n2 顔の下半分の仮面様顔貌もあるが，口は閉じてる\n3 時折口が開いたまま\n4 ほとんどの時間口が開いたままになってる",
-  "3N": "0 なし\n1 誘発時に出現\n2 誘発なしでもあるが，他動的に容易に動かせる\n3 誘発なしでもあり，多糖的に動かすには努力を要する\n4 誘発なしでもあり，他動的に動かせない",
-  "3RUE": "0 なし\n1 誘発時に出現\n2 誘発なしでもあるが，他動的に容易に動かせる\n3 誘発なしでもあり，多糖的に動かすには努力を要する\n4 誘発なしでもあり，他動的に動かせない",
-  "3LUE": "0 なし\n1 誘発時に出現\n2 誘発なしでもあるが，他動的に容易に動かせる\n3 誘発なしでもあり，多糖的に動かすには努力を要する\n4 誘発なしでもあり，他動的に動かせない",
-  "3RLE": "0 なし\n1 誘発時に出現\n2 誘発なしでもあるが，他動的に容易に動かせる\n3 誘発なしでもあり，多糖的に動かすには努力を要する\n4 誘発なしでもあり，他動的に動かせない",
-  "3LLE": "0 なし\n1 誘発時に出現\n2 誘発なしでもあるが，他動的に容易に動かせる\n3 誘発なしでもあり，多糖的に動かすには努力を要する\n4 誘発なしでもあり，他動的に動かせない",
-  "4R": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "4L": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "5R": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "5L": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "6R": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "6L": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "7R": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "7L": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "8R": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "8L": "0 問題なし\n1 a)1-2回の中断 b)ほんの少し遅い c)最後に振幅減少\n2 a)3-5回の中断, b)少し遅い，c)中程で振幅減少\n3 a)5回を超える中断orすくみ,b)遅い,c)最初から振幅減衰\n4 全くor殆どできない",
-  "9": "0 問題なし\n1 正常より遅い, 2回以上施行, 椅子の前方に異動\n2 肘掛けを使う\n3 肘掛けを使って2回以上, 介助は不要\n4 介助なしでは立てない",
-  "10": "0 振戦なし\n1 わずかな歩行障害\n2 相当の歩行障害あるが自立\n3 杖や歩行器が必要\n4 歩けない or 人の介助が必要",
-  "11": "0 振戦なし\n1 歩き始め, 方向転換時, ドアを通る際に1度立ち止まりがある\n2 歩き始め, 方向転換時, ドアを通る際に２回以上立ち止まりがある\n3 直進歩行中に一度すくむ\n4 直進歩行中に何度もすくむ",
-  "12": "0 振戦なし\n1 3-5歩要するが戻れる\n2 5歩より多く要するが,助けは要らない\n3 立位は取れるが, 倒れる\n4 非常に不安定, 軽く引くと倒れる",
-  "13": "0 振戦なし\n1 完全な直立ではないが, 高齢者では正常\n2 明らかな前屈,側屈があるが,姿勢を直せる\n3 随意的に姿勢を直せない\n4 極めて異常な姿勢",
-  "14": "0 振戦なし\n1 全体的にわずかな緩慢\n2 軽度の緩慢\n3 中等度の緩慢\n4 重度の緩慢",
-  "15R": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "15L": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "16R": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "16L": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "17RUE": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "17LUE": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "17RLE": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "17LLE": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~3cm\n3 振幅は3cm~10cm\n4 振幅が10cm以上",
-  "17Lip": "0 振戦なし\n1 振戦はあるが, 振幅は1cm未満\n2 振幅は1cm~2cm\n3 振幅は2cm~3cm\n4 振幅が3cm以上",
-  "18": "0 振戦なし\n1 全ての検査時間のうち,25%以下\n2 全ての検査時間のうち,26-50%\n3 全ての検査時間のうち,51-75%\n4 全ての検査時間のうち,75%を超える",
-};
-
+/** localStorage キー（スコア・メモの自動保存） */
 const STORAGE_KEY = "updrs3_simple_v1";
 
-function Scorer({ guest = false }) {
-  const nav = useNavigate();
+/** 0–4 のスコアボタン（単体・グループ共通） */
+function ScoreButtons({ itemId, score, setScore }) {
+  const current = Number(score ?? -1);
+  return (
+    <div className="w-full grid grid-cols-5 gap-2 sm:flex sm:flex-nowrap sm:gap-2 sm:justify-end">
+      {[0, 1, 2, 3, 4].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => setScore(itemId, n)}
+          className={`py-2 rounded-lg border text-sm w-full sm:w-12 md:w-14 lg:w-16 ${
+            current === n
+              ? "bg-blue-500 text-white border-blue-500"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** テキスト幅を計測してポップオーバー位置・幅を算出 */
+function getPopoverLayout(text, rect) {
+  const measure = (t) => {
+    const probe = document.createElement("div");
+    Object.assign(probe.style, {
+      position: "absolute",
+      visibility: "hidden",
+      whiteSpace: "nowrap",
+      fontSize: "0.875rem",
+      lineHeight: "1.25rem",
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
+    });
+    const longest = String(t).split("\n").reduce((a, b) => (a.length >= b.length ? a : b), "");
+    probe.textContent = longest || "";
+    document.body.appendChild(probe);
+    const w = probe.scrollWidth;
+    document.body.removeChild(probe);
+    return w;
+  };
+  const M = 8;
+  const minW = 220;
+  const maxW = Math.max(220, window.innerWidth - 2 * M);
+  const contentW = measure(text) + 40;
+  const w = Math.min(Math.max(contentW, minW), maxW);
+  let left = rect.left;
+  let top = rect.bottom + M;
+  if (left > window.innerWidth - w - M) left = Math.max(M, window.innerWidth - w - M);
+  if (left < M) left = M;
+  const POP_H = 240;
+  if (top + POP_H > window.innerHeight - M) top = Math.max(M, rect.top - POP_H - M);
+  return { x: left, y: top, w };
+}
+
+function Scorer() {
   const allItems = React.useMemo(
     () => FORM_ITEMS.flatMap((e) => (e.group ? e.items : [e])),
     []
@@ -217,28 +118,20 @@ function Scorer({ guest = false }) {
   // --- Supabase 認証/保存 用 ---
   const [session, setSession] = useState(null);
   const [mine, setMine] = useState([]); // 自分の記録（一覧表示用）
-  // --- Supabase 認証状態を監視 ---
+  // --- Supabase 認証（ログイン不要：匿名で自動サインイン）---
   useEffect(() => {
-    if (!supabase) return; // 環境変数未設定時は何もしない
-    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      const s = data.session ?? null;
+      setSession(s);
+      if (!s) supabase.auth.signInAnonymously().catch(() => {});
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // --- ログイン/ログアウト関数 ---
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-
-  // 時刻プルダウンの選択肢
-  const hourOptions = [];
-  for (let h = 0; h < 24; h++) {
-    hourOptions.push(String(h).padStart(2, "0"));
-  }
-  const minuteOptions = [];
-  for (let m = 0; m < 60; m += 5) {
-    minuteOptions.push(String(m).padStart(2, "0"));
-  }
+  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")), []);
+  const minuteOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0")), []);
 
   // 保存/読込（ブラウザに自動保存）
   useEffect(() => {
@@ -274,77 +167,39 @@ function Scorer({ guest = false }) {
   const handleLabelClick = (e, id) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    const text = GUIDE_TEXT[id] || "この項目の説明は未設定です。GUIDE_TEXT に追記してください。";
-
-    // --- ポップ幅をテキストに合わせて自動調整（折り返さない）---
-    const measure = (t) => {
-      const probe = document.createElement('div');
-      probe.style.position = 'absolute';
-      probe.style.visibility = 'hidden';
-      probe.style.whiteSpace = 'nowrap';
-      probe.style.fontSize = '0.875rem'; // text-sm 相当
-      probe.style.lineHeight = '1.25rem';
-      probe.style.padding = '0px';
-      probe.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-      // 最長行のみ計測
-      const longest = String(t).split('\n').reduce((a, b) => (a.length >= b.length ? a : b), '');
-      probe.textContent = longest || '';
-      document.body.appendChild(probe);
-      const w = probe.scrollWidth;
-      document.body.removeChild(probe);
-      return w;
-    };
-
-    const M = 8;               // 余白
-    const minW = 220;          // 最小幅
-    const maxW = Math.max(220, window.innerWidth - 2 * M); // 画面内に収まる上限
-    const contentW = measure(text) + 40; // パディング/ボーダー分を上乗せ
-    const popW = Math.min(Math.max(contentW, minW), maxW);
-
-    // --- 位置計算（fixed：ビューポート基準）---
-    let left = rect.left;
-    let top  = rect.bottom + M; // ボタン直下
-
-    const maxLeft = window.innerWidth - popW - M;
-    if (left > maxLeft) left = Math.max(M, maxLeft);
-    if (left < M) left = M;
-
-    const POP_H = 240; // 想定高さ（足りなければ増やす）
-    if (top + POP_H > window.innerHeight - M) {
-      top = Math.max(M, rect.top - POP_H - M);
-    }
-
-    setPop({ open: true, id, text, x: left, y: top, w: popW });
+    const text = GUIDE_TEXT[id] ?? "この項目の説明は未設定です。";
+    const { x, y, w } = getPopoverLayout(text, rect);
+    setPop({ open: true, id, text, x, y, w });
   };
 
-  // --- Supabase: 保存/自分の記録の読込 ---
-    async function saveAssessment() {
-      if (guest) return alert('ゲストモードでは保存できません。ログインしてください');
-      if (!supabase) return alert('Supabaseの設定がされていません（.env.local / Vercel の環境変数を確認）');
-      if (!session?.user) return alert("先にログインしてください");
-      const measured_at = new Date(`${measureDate}T${measureHour}:${measureMinute}:00`);
-      const { error } = await supabase.from('assessments').insert({
-        user_id: session.user.id,
-        patient_code: userId || null,
-        total,
-        items: scores,
-        state: onOffState,
-        measured_at,
-        memo: notes || null,
-      });
-      if (error) alert(error.message); else alert("保存しました");
-    }
+  async function saveAssessment() {
+    if (!supabase) return alert("Supabaseの設定がされていません（.env を確認）");
+    if (!session?.user) return alert("保存の準備ができていません。しばらく待ってから再度お試しください。");
+    const measured_at = new Date(`${measureDate}T${measureHour}:${measureMinute}:00`);
+    const { error } = await supabase.from("assessments").insert({
+      user_id: session.user.id,
+      patient_code: userId || null,
+      total,
+      items: scores,
+      state: onOffState,
+      measured_at,
+      memo: notes || null,
+    });
+    if (error) alert(error.message);
+    else alert("保存しました");
+  }
 
-    async function loadMine() {
-      if (!supabase) return alert('Supabaseの設定がされていません（.env.local / Vercel の環境変数を確認）');
-      if (!session?.user) return alert("先にログインしてください");
-      const { data, error } = await supabase
-        .from('assessments')
-        .select('id, created_at, patient_code, total, state, measured_at')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) alert(error.message); else setMine(data ?? []);
-    }
+  async function loadMine() {
+    if (!supabase) return alert("Supabaseの設定がされていません（.env を確認）");
+    if (!session?.user) return alert("準備ができていません。しばらく待ってから再度お試しください。");
+    const { data, error } = await supabase
+      .from("assessments")
+      .select("id, created_at, patient_code, total, state, measured_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) alert(error.message);
+    else setMine(data ?? []);
+  }
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
   const handleExportCSV = () => {
@@ -473,27 +328,28 @@ function Scorer({ guest = false }) {
           </button>
         </div>
 
-        {/* 認証＆保存 操作バー（Magic Link は使わない） */}
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
-          {guest ? (
-            <div className="text-sm text-gray-600">
-              ゲストモードで利用中：保存や記録の閲覧はできません。<br className="sm:hidden" />
-              ログインすると Supabase に保存できます。
-            </div>
-          ) : session ? (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-600 truncate max-w-[200px]">{session.user.email}</span>
-              <button className="px-3 py-2 rounded bg-white border" onClick={signOut}>ログアウト</button>
-              <button className="px-3 py-2 rounded bg-emerald-600 text-white" onClick={saveAssessment}>保存</button>
-              <button className="px-3 py-2 rounded bg-white border" onClick={loadMine}>自分の記録</button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-gray-600">保存にはログインが必要です。</span>
-              <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={() => nav('/')}>ログインへ</button>
-            </div>
-          )}
-        </div>
+        {/* 保存・自分の記録（Supabase 設定時のみ・ログイン不要） */}
+        {supabase && (
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              className="px-3 py-2 rounded bg-emerald-600 text-white disabled:opacity-50"
+              onClick={saveAssessment}
+              disabled={!session?.user}
+            >
+              保存
+            </button>
+            <button
+              className="px-3 py-2 rounded bg-white border disabled:opacity-50"
+              onClick={loadMine}
+              disabled={!session?.user}
+            >
+              自分の記録
+            </button>
+            {!session?.user && (
+              <span className="text-xs text-gray-500">準備中…</span>
+            )}
+          </div>
+        )}
 
         {/* 合計 & メモ */}
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -540,21 +396,7 @@ function Scorer({ guest = false }) {
                               説明
                             </button>
                           </div>
-                          <div className="w-full grid grid-cols-5 gap-2 sm:flex sm:flex-nowrap sm:gap-2 sm:justify-end">
-                            {[0,1,2,3,4].map((n)=>(
-                              <button
-                                key={n}
-                                onClick={()=>setScore(it.id,n)}
-                                className={`py-2 rounded-lg border text-sm w-full sm:w-12 md:w-14 lg:w-16 ${
-                                  Number(scores[it.id]??-1)===n
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                }`}
-                              >
-                                {n}
-                              </button>
-                            ))}
-                          </div>
+                          <ScoreButtons itemId={it.id} score={scores[it.id]} setScore={setScore} />
                         </div>
                       </td>
                     </tr>
@@ -587,21 +429,7 @@ function Scorer({ guest = false }) {
                         <td colSpan={2} className="p-3 align-top">
                           <div className="flex items-center justify-between gap-2 whitespace-nowrap">
                             <div className="text-xs text-gray-500">{it.label}</div>
-                            <div className="w-full sm:w-auto grid grid-cols-5 gap-2 sm:flex sm:flex-nowrap sm:gap-2 sm:justify-end">
-                              {[0,1,2,3,4].map((n)=>(
-                                <button
-                                  key={n}
-                                  onClick={()=>setScore(it.id,n)}
-                                  className={`py-2 rounded-lg border text-sm w-full sm:w-12 md:w-14 lg:w-16 ${
-                                    Number(scores[it.id]??-1)===n
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                  }`}
-                                >
-                                  {n}
-                                </button>
-                              ))}
-                            </div>
+                            <ScoreButtons itemId={it.id} score={scores[it.id]} setScore={setScore} />
                           </div>
                         </td>
                       </tr>
@@ -686,7 +514,7 @@ function AppRoutes() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="max-w-5xl mx-auto p-4">
         <Routes>
-          <Route path="/" element={<Scorer guest={true} />} />
+          <Route path="/" element={<Scorer />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
