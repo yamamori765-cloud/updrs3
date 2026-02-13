@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import QRCode from "qrcode";
+import { Encoding } from "encoding-japanese";
 import { FORM_ITEMS } from "./constants/formItems";
 import { GUIDE_TEXT } from "./constants/guideText";
 import { supabase } from "./lib/supabase";
@@ -232,6 +233,21 @@ function Scorer() {
     return lines.join(CRLF);
   };
 
+  /** UTF-8文字列をShift-JISのバイト配列に変換 */
+  const convertToShiftJIS = (utf8Text) => {
+    try {
+      const utf8Array = Encoding.stringToCode(utf8Text);
+      const sjisArray = Encoding.convert(utf8Array, {
+        to: "SJIS",
+        from: "UNICODE",
+      });
+      return new Uint8Array(sjisArray);
+    } catch (e) {
+      console.warn("Shift-JIS変換エラー、UTF-8のまま使用:", e);
+      return null;
+    }
+  };
+
   /** QRコードを生成してモーダル表示 */
   const handleShowQR = async () => {
     const text = buildQrPayload();
@@ -253,7 +269,17 @@ function Scorer() {
       }
 
       const urls = await Promise.all(
-        segments.map((seg) => QRCode.toDataURL(seg, { width: 280, margin: 2 }))
+        segments.map((seg) => {
+          // Shift-JISに変換してQRコード生成
+          const sjisBytes = convertToShiftJIS(seg);
+          if (sjisBytes) {
+            // Shift-JISのバイト配列をQRCodeに渡す（バイトモード）
+            return QRCode.toDataURL(sjisBytes, { width: 280, margin: 2 });
+          } else {
+            // 変換失敗時はUTF-8のまま
+            return QRCode.toDataURL(seg, { width: 280, margin: 2 });
+          }
+        })
       );
 
       setQrText(text);
@@ -264,10 +290,26 @@ function Scorer() {
     }
   };
 
-  /** テキストをコピー（BOM付きUTF-8でWindowsの文字化けを防止） */
+  /** テキストをコピー（Shift-JISでWindowsの文字化けを防止） */
   const handleCopyQrText = () => {
-    const BOM = "\uFEFF";
-    navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
+    try {
+      const sjisBytes = convertToShiftJIS(qrText);
+      if (sjisBytes) {
+        // Shift-JISのバイト配列をBlobに変換してコピー
+        const blob = new Blob([sjisBytes], { type: "text/plain; charset=shift_jis" });
+        navigator.clipboard.write([
+          new ClipboardItem({ "text/plain": blob }),
+        ]).then(() => alert("テキストをコピーしました（Shift-JIS）"));
+      } else {
+        // 変換失敗時はUTF-8 BOM付きでコピー
+        const BOM = "\uFEFF";
+        navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
+      }
+    } catch (e) {
+      // ClipboardItemが使えない場合はUTF-8 BOM付きでフォールバック
+      const BOM = "\uFEFF";
+      navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
+    }
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
@@ -573,7 +615,7 @@ function Scorer() {
               </div>
               <div>
                 <div className="mb-1 text-xs text-gray-500">
-                  QRの内容（日本語・改行付き・Windows用CRLF）
+                  QRの内容（Shift-JIS・改行付き・Windows用CRLF）
                 </div>
                 <textarea
                   readOnly
@@ -586,7 +628,7 @@ function Scorer() {
                   className="mt-2 w-full rounded-lg border bg-gray-100 py-2 text-sm hover:bg-gray-200"
                   onClick={handleCopyQrText}
                 >
-                  テキストをコピー（BOM付きUTF-8）
+                  テキストをコピー（Shift-JIS）
                 </button>
               </div>
             </div>
