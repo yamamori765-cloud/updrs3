@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import QRCode from "qrcode";
-import { Encoding } from "encoding-japanese";
 import { FORM_ITEMS } from "./constants/formItems";
 import { GUIDE_TEXT } from "./constants/guideText";
 import { supabase } from "./lib/supabase";
@@ -66,6 +65,21 @@ function getPopoverLayout(text, rect) {
 }
 
 const CRLF = "\r\n";
+
+/** QR用：グループID → 短い英語キー（重複省略） */
+const QR_GROUP_KEY = {
+  rigidity: "rigidity",
+  tap: "finger_tap",
+  hand: "hand",
+  prosup: "pro_sup",
+  toe_tapping: "toe_tap",
+  leg_agility: "leg_ag",
+  postural_tremor: "post_tremor",
+  kinetic_tremor: "kin_tremor",
+  rest_tremor: "rest_tremor",
+};
+/** QR用：単体項目の短い英語キー */
+const QR_SINGLE_KEY = { "1": "speech", "2": "facial", "9": "arising", "10": "gait", "11": "freezing", "12": "post_stab", "13": "posture", "14": "body_brady", "18": "rest_const" };
 
 function Scorer() {
   const allItems = React.useMemo(
@@ -208,44 +222,32 @@ function Scorer() {
     else setMine(data ?? []);
   }
 
-  /** 現在の入力内容を日本語・改行付きテキストにまとめる（QRコード・電子カルテ用・Windows対応CRLF） */
+  /** QRコード用：重複省略・R/L表記の英数字テキスト */
   const buildQrPayload = () => {
     const lines = [
-      `日付: ${measureDate}`,
-      `時間: ${measureHour}:${measureMinute}`,
-      `合計: ${total}`,
+      `date:${measureDate}`,
+      `time:${measureHour}:${measureMinute}`,
+      `total:${total}`,
       "",
-      "【項目スコア】",
+      "order_5_rigidity:NECK,RUE,LUE,RLE,LLE",
+      "order_5_rest_tremor:RUE,LUE,RLE,LLE,Lip",
+      "",
     ];
-
-    // 項目スコア（重複部分はグループ名でまとめる）
     FORM_ITEMS.forEach((entry) => {
       if (entry.group) {
-        lines.push(`${entry.label}:`);
-        entry.items.forEach((it) => {
-          lines.push(`  ${it.label.trim()}: ${scores[it.id] ?? 0}`);
-        });
+        const key = QR_GROUP_KEY[entry.id] ?? entry.id;
+        const items = entry.items;
+        if (items.length === 2 && items[0].id.endsWith("R") && items[1].id.endsWith("L")) {
+          lines.push(`${key}: R${scores[items[0].id] ?? 0} L${scores[items[1].id] ?? 0}`);
+        } else {
+          lines.push(`${key}: ${items.map((it) => scores[it.id] ?? 0).join(",")}`);
+        }
       } else {
-        lines.push(`${entry.label}: ${scores[entry.id] ?? 0}`);
+        const key = QR_SINGLE_KEY[entry.id] ?? entry.id;
+        lines.push(`${key}:${scores[entry.id] ?? 0}`);
       }
     });
-
     return lines.join(CRLF);
-  };
-
-  /** UTF-8文字列をShift-JISのバイト配列に変換 */
-  const convertToShiftJIS = (utf8Text) => {
-    try {
-      const utf8Array = Encoding.stringToCode(utf8Text);
-      const sjisArray = Encoding.convert(utf8Array, {
-        to: "SJIS",
-        from: "UNICODE",
-      });
-      return new Uint8Array(sjisArray);
-    } catch (e) {
-      console.warn("Shift-JIS変換エラー、UTF-8のまま使用:", e);
-      return null;
-    }
   };
 
   /** QRコードを生成してモーダル表示 */
@@ -257,7 +259,7 @@ function Scorer() {
         return;
       }
 
-      // テキストを4分割の連結QRにする（できるだけ均等な長さで4つまで）
+      // テキストを4分割の連結QRにする（英数字のみなので文字化けしない）
       const totalLen = text.length;
       const chunkSize = Math.ceil(totalLen / 4);
       const segments = [];
@@ -269,17 +271,7 @@ function Scorer() {
       }
 
       const urls = await Promise.all(
-        segments.map((seg) => {
-          // Shift-JISに変換してQRコード生成
-          const sjisBytes = convertToShiftJIS(seg);
-          if (sjisBytes) {
-            // Shift-JISのバイト配列をQRCodeに渡す（バイトモード）
-            return QRCode.toDataURL(sjisBytes, { width: 280, margin: 2 });
-          } else {
-            // 変換失敗時はUTF-8のまま
-            return QRCode.toDataURL(seg, { width: 280, margin: 2 });
-          }
-        })
+        segments.map((seg) => QRCode.toDataURL(seg, { width: 280, margin: 2 }))
       );
 
       setQrText(text);
@@ -290,26 +282,9 @@ function Scorer() {
     }
   };
 
-  /** テキストをコピー（Shift-JISでWindowsの文字化けを防止） */
+  /** テキストをコピー（英数字のみ） */
   const handleCopyQrText = () => {
-    try {
-      const sjisBytes = convertToShiftJIS(qrText);
-      if (sjisBytes) {
-        // Shift-JISのバイト配列をBlobに変換してコピー
-        const blob = new Blob([sjisBytes], { type: "text/plain; charset=shift_jis" });
-        navigator.clipboard.write([
-          new ClipboardItem({ "text/plain": blob }),
-        ]).then(() => alert("テキストをコピーしました（Shift-JIS）"));
-      } else {
-        // 変換失敗時はUTF-8 BOM付きでコピー
-        const BOM = "\uFEFF";
-        navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
-      }
-    } catch (e) {
-      // ClipboardItemが使えない場合はUTF-8 BOM付きでフォールバック
-      const BOM = "\uFEFF";
-      navigator.clipboard.writeText(BOM + qrText).then(() => alert("テキストをコピーしました（UTF-8 BOM付き）"));
-    }
+    navigator.clipboard.writeText(qrText).then(() => alert("テキストをコピーしました"));
   };
 
   // CSVエクスポート関数（BOM付きUTF-8、項目を行に）
@@ -615,7 +590,7 @@ function Scorer() {
               </div>
               <div>
                 <div className="mb-1 text-xs text-gray-500">
-                  QRの内容（Shift-JIS・改行付き・Windows用CRLF）
+                  QRの内容（英数字のみ・改行付き）
                 </div>
                 <textarea
                   readOnly
@@ -628,7 +603,7 @@ function Scorer() {
                   className="mt-2 w-full rounded-lg border bg-gray-100 py-2 text-sm hover:bg-gray-200"
                   onClick={handleCopyQrText}
                 >
-                  テキストをコピー（Shift-JIS）
+                  テキストをコピー
                 </button>
               </div>
             </div>
