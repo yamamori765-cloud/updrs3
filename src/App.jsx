@@ -66,20 +66,20 @@ function getPopoverLayout(text, rect) {
 
 const CRLF = "\r\n";
 
-/** QR用：グループID → 短い英語キー（重複省略） */
+/** QR用：グループID → 短い英語キー（_は使わず-のみ・リーダーで=に化けるため） */
 const QR_GROUP_KEY = {
   rigidity: "rigidity",
-  tap: "finger_tap",
+  tap: "finger-tap",
   hand: "hand",
-  prosup: "pro_sup",
-  toe_tapping: "toe_tap",
-  leg_agility: "leg_ag",
-  postural_tremor: "post_tremor",
-  kinetic_tremor: "kin_tremor",
-  rest_tremor: "rest_tremor",
+  prosup: "pro-sup",
+  toe_tapping: "toe-tap",
+  leg_agility: "leg-ag",
+  postural_tremor: "post-tremor",
+  kinetic_tremor: "kin-tremor",
+  rest_tremor: "rest-tremor",
 };
-/** QR用：単体項目の短い英語キー */
-const QR_SINGLE_KEY = { "1": "speech", "2": "facial", "9": "arising", "10": "gait", "11": "freezing", "12": "post_stab", "13": "posture", "14": "body_brady", "18": "rest_const" };
+/** QR用：単体項目の短い英語キー（_は-に統一） */
+const QR_SINGLE_KEY = { "1": "speech", "2": "facial", "9": "arising", "10": "gait", "11": "freezing", "12": "post-stab", "13": "posture", "14": "body-brady", "18": "rest-const" };
 
 function Scorer() {
   const allItems = React.useMemo(
@@ -222,15 +222,17 @@ function Scorer() {
     else setMine(data ?? []);
   }
 
-  /** QRコード用：重複省略・R/L表記の英数字テキスト */
+  /** QRコード用：重複省略・R/L表記（:は.に_は-に・リーダーで化けるため） */
   const buildQrPayload = () => {
+    const sep = "."; // コロンはリーダーで+に化けるため
+    const timeStr = `${measureHour}-${measureMinute}`; // 時刻の:も避ける
     const lines = [
-      `date:${measureDate}`,
-      `time:${measureHour}:${measureMinute}`,
-      `total:${total}`,
+      `date${sep}${measureDate}`,
+      `time${sep}${timeStr}`,
+      `total${sep}${total}`,
       "",
-      "order_5_rigidity:NECK,RUE,LUE,RLE,LLE",
-      "order_5_rest_tremor:RUE,LUE,RLE,LLE,Lip",
+      `order-5-rigidity${sep}NECK,RUE,LUE,RLE,LLE`,
+      `order-5-rest-tremor${sep}RUE,LUE,RLE,LLE,Lip`,
       "",
     ];
     FORM_ITEMS.forEach((entry) => {
@@ -238,13 +240,13 @@ function Scorer() {
         const key = QR_GROUP_KEY[entry.id] ?? entry.id;
         const items = entry.items;
         if (items.length === 2 && items[0].id.endsWith("R") && items[1].id.endsWith("L")) {
-          lines.push(`${key}: R${scores[items[0].id] ?? 0} L${scores[items[1].id] ?? 0}`);
+          lines.push(`${key}${sep} R${scores[items[0].id] ?? 0} L${scores[items[1].id] ?? 0}`);
         } else {
-          lines.push(`${key}: ${items.map((it) => scores[it.id] ?? 0).join(",")}`);
+          lines.push(`${key}${sep} ${items.map((it) => scores[it.id] ?? 0).join(",")}`);
         }
       } else {
         const key = QR_SINGLE_KEY[entry.id] ?? entry.id;
-        lines.push(`${key}:${scores[entry.id] ?? 0}`);
+        lines.push(`${key}${sep}${scores[entry.id] ?? 0}`);
       }
     });
     return lines.join(CRLF);
